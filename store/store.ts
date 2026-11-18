@@ -1,15 +1,72 @@
 import { create } from 'zustand';
 
-export interface BearState {
-  bears: number;
-  increasePopulation: () => void;
-  removeAllBears: () => void;
-  updateBears: (newBears: number) => void;
+import type { AiringSegment, LibraryTab, TitleId } from '@/types';
+
+interface Settings {
+  reminders: boolean;
+  autoplay: boolean;
 }
 
-export const useStore = create<BearState>((set) => ({
-  bears: 0,
-  increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
-  removeAllBears: () => set({ bears: 0 }),
-  updateBears: (newBears) => set({ bears: newBears }),
+export interface AppState {
+  saved: TitleId[];
+  /** Title id -> percent watched (0-100) */
+  watching: Record<TitleId, number>;
+  watched: TitleId[];
+  reminders: TitleId[];
+  hiddenContinue: TitleId[];
+  settings: Settings;
+
+  libraryTab: LibraryTab;
+  /** 0 = Sunday */
+  airingDay: number;
+  airingSegment: AiringSegment;
+
+  toggleSave: (id: TitleId) => void;
+  toggleReminder: (id: TitleId) => void;
+  setProgress: (id: TitleId, percent: number) => void;
+  markWatched: (id: TitleId) => void;
+  hideContinue: (id: TitleId) => void;
+  clearHistory: () => void;
+  setSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  setLibraryTab: (tab: LibraryTab) => void;
+  setAiringDay: (day: number) => void;
+  setAiringSegment: (segment: AiringSegment) => void;
+}
+
+const toggle = (list: TitleId[], id: TitleId) =>
+  list.includes(id) ? list.filter((x) => x !== id) : [id, ...list];
+
+export const useApp = create<AppState>((set) => ({
+  saved: ['odyssey', 'empress', 'wolf', 'godzilla', 'silent', 'spider'],
+  watching: { odyssey: 58, empress: 34, wolf: 78 },
+  watched: ['resident', 'spider'],
+  reminders: ['empress', 'wolf'],
+  hiddenContinue: [],
+  settings: { reminders: true, autoplay: true },
+
+  libraryTab: 'saved',
+  airingDay: new Date().getDay(),
+  airingSegment: 'all',
+
+  toggleSave: (id) => set((s) => ({ saved: toggle(s.saved, id) })),
+  toggleReminder: (id) => set((s) => ({ reminders: toggle(s.reminders, id) })),
+  setProgress: (id, percent) =>
+    set((s) => ({
+      watching: { ...s.watching, [id]: percent },
+      hiddenContinue: s.hiddenContinue.filter((x) => x !== id),
+    })),
+  markWatched: (id) =>
+    set((s) => {
+      const { [id]: _removed, ...watching } = s.watching;
+      return { watching, watched: s.watched.includes(id) ? s.watched : [id, ...s.watched] };
+    }),
+  hideContinue: (id) => set((s) => ({ hiddenContinue: [id, ...s.hiddenContinue] })),
+  clearHistory: () => set({ watching: {}, watched: [], hiddenContinue: [] }),
+  setSetting: (key, value) => set((s) => ({ settings: { ...s.settings, [key]: value } })),
+  setLibraryTab: (libraryTab) => set({ libraryTab }),
+  setAiringDay: (airingDay) => set({ airingDay }),
+  setAiringSegment: (airingSegment) => set({ airingSegment }),
 }));
+
+export const useIsSaved = (id: TitleId) => useApp((s) => s.saved.includes(id));
+export const useHasReminder = (id: TitleId) => useApp((s) => s.reminders.includes(id));
