@@ -1,11 +1,17 @@
 import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
+import { ActionSheet } from '@/components/ActionSheet';
+import { EmptyState } from '@/components/EmptyState';
 import { Poster } from '@/components/Poster';
 import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { UnderlineTabs } from '@/components/UnderlineTabs';
+import { Icon } from '@/components/ui/Icon';
+import { Pressable } from '@/components/ui/Pressable';
 import { getTitle } from '@/data/titles';
+import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
 import type { LibraryTab, Title } from '@/types';
 
@@ -15,31 +21,63 @@ const TABS: { value: LibraryTab; label: string }[] = [
   { value: 'watched', label: 'Watched' },
 ];
 
-const EMPTY: Record<LibraryTab, string> = {
-  saved: 'Nothing saved yet. Tap the bookmark on any title.',
-  watching: 'Nothing in progress.',
-  watched: 'Finished titles show up here.',
+const EMPTY: Record<LibraryTab, [string, string]> = {
+  saved: ['Nothing saved yet', 'Tap the plus on any title to keep it here.'],
+  watching: ['Nothing in progress', 'Start a trailer or episode and it will wait for you here.'],
+  watched: ['Nothing watched yet', 'Finished titles show up here.'],
 };
+
+type Sort = 'recent' | 'az' | 'rating';
+const SORTS: { value: Sort; label: string }[] = [
+  { value: 'recent', label: 'Recently added' },
+  { value: 'az', label: 'A – Z' },
+  { value: 'rating', label: 'Top rated' },
+];
 
 const COLUMNS = 3;
 const GAP = 12;
 
 export default function Library() {
   const router = useRouter();
-  const { libraryTab, setLibraryTab, saved, watching, watched } = useApp();
+  const open = useOpenTitle();
+  const { libraryTab, setLibraryTab, saved, watching, watched, toggleSave, markWatched } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [sort, setSort] = useState<Sort>('recent');
+  const [sortOpen, setSortOpen] = useState(false);
 
-  const ids =
-    libraryTab === 'saved' ? saved : libraryTab === 'watching' ? Object.keys(watching) : watched;
-  const data = ids.map((id) => getTitle(id)).filter((t): t is Title => !!t);
-  const open = (t: Title) => router.push({ pathname: '/title/[id]', params: { id: t.id } });
+  const data = useMemo(() => {
+    const ids = libraryTab === 'saved' ? saved : libraryTab === 'watching' ? Object.keys(watching) : watched;
+    const list = ids.map((id) => getTitle(id)).filter((t): t is Title => !!t);
+    if (sort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'rating') return [...list].sort((a, b) => b.score - a.score);
+    return list;
+  }, [libraryTab, saved, watching, watched, sort]);
+
+  const remove = (t: Title) => {
+    if (libraryTab === 'saved') toggleSave(t.id);
+    else if (libraryTab === 'watching') markWatched(t.id);
+    else useApp.setState((s) => ({ watched: s.watched.filter((id) => id !== t.id) }));
+  };
 
   return (
     <View className="flex-1">
-      <ScreenHeader title="Library" />
+      <ScreenHeader
+        title="Library"
+        right={
+          <View className="flex-row items-center gap-5">
+            <Pressable accessibilityRole="button" accessibilityLabel="Sort" scale={0.9} onPress={() => setSortOpen(true)}>
+              <Icon name="sort" size={20} />
+            </Pressable>
+            <Pressable accessibilityRole="button" scale={0.94} onPress={() => setEditing((e) => !e)}>
+              <Text className="text-[15px] font-semibold text-white">{editing ? 'Done' : 'Edit'}</Text>
+            </Pressable>
+          </View>
+        }
+      />
       <UnderlineTabs tabs={TABS} value={libraryTab} onChange={setLibraryTab} />
       <FlatList
         // a new key remounts the grid so the entrance replays on tab change
-        key={libraryTab}
+        key={`${libraryTab}-${sort}`}
         data={data}
         numColumns={COLUMNS}
         keyExtractor={(t) => t.id}
@@ -47,20 +85,40 @@ export default function Library() {
         contentContainerStyle={{ padding: 20, gap: GAP }}
         columnWrapperStyle={{ gap: GAP }}
         ListEmptyComponent={
-          <Text className="mt-16 px-8 text-center text-[14.5px] leading-5 text-t2">
-            {EMPTY[libraryTab]}
-          </Text>
+          <EmptyState
+            title={EMPTY[libraryTab][0]}
+            body={EMPTY[libraryTab][1]}
+            action="Browse trending"
+            onAction={() => router.navigate('/search')}
+          />
         }
         renderItem={({ item, index }) => (
           <Reveal index={index} style={{ flex: 1 / COLUMNS }}>
-            <Poster
-              title={item}
-              width={106}
-              subtitle={libraryTab === 'watching' ? `${watching[item.id]}% watched` : undefined}
-              onPress={open}
-            />
+            <View>
+              <Poster
+                title={item}
+                width={106}
+                subtitle={libraryTab === 'watching' ? `${Math.round(watching[item.id] ?? 0)}% watched` : undefined}
+                onPress={editing ? () => remove(item) : open}
+              />
+              {editing ? (
+                <View pointerEvents="none" className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/70">
+                  <Icon name="close" size={13} />
+                </View>
+              ) : null}
+            </View>
           </Reveal>
         )}
+      />
+      <ActionSheet
+        visible={sortOpen}
+        title="Sort by"
+        onClose={() => setSortOpen(false)}
+        rows={SORTS.map((s) => ({
+          label: s.label,
+          icon: sort === s.value ? 'check' : undefined,
+          onPress: () => setSort(s.value),
+        }))}
       />
     </View>
   );
