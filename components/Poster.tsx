@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/Icon';
@@ -15,7 +16,8 @@ interface PosterProps {
   date?: string;
   showScore?: boolean;
   subtitle?: string;
-  onPress?: (title: Title) => void;
+  /** Receives the artwork view so the caller can fly it into the detail page */
+  onPress?: (title: Title, art: View | null) => void;
 }
 
 export function Poster({
@@ -27,14 +29,15 @@ export function Poster({
   subtitle,
   onPress,
 }: PosterProps) {
+  const art = useRef<View>(null);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title.name}
       scale={0.955}
-      onPress={() => onPress?.(title)}
+      onPress={() => onPress?.(title, art.current)}
       style={{ width }}>
-      <View>
+      <View ref={art} collapsable={false}>
         <PosterArt title={title} width={width} height={width * 1.5} />
         {showScore ? (
           <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-full bg-black/65 px-2 py-1">
