@@ -34,42 +34,59 @@ interface Flight {
   radius: number;
   /** Detail back to card, the same flight played backwards */
   reverse?: boolean;
+  /** Where the hero sits when closing: minus the detail scroll offset */
+  offsetY?: number;
 }
 
 interface FlightContextValue {
   /** Opens a title. Pass the card's view so the artwork can fly from it. */
   open: (title: Title, from?: View | null, radius?: number) => void;
-  /** Goes back from a title. Flies the hero into the card it came from when it can. */
-  close: (titleId: string) => void;
+  /**
+   * Goes back from a title. Flies the hero into the card it came from when it can,
+   * while the detail screen fades out underneath. Pass the detail scroll offset.
+   */
+  close: (titleId: string, scrollOffset?: number) => void;
   /** True while the detail hero should stay hidden under the flying artwork */
   flying: boolean;
+  /** True from the moment close() is called until the screen is gone */
+  closing: boolean;
 }
 
 const FlightContext = createContext<FlightContextValue>({
   open: () => {},
   close: () => {},
   flying: false,
+  closing: false,
 });
 
 export const useOpenTitle = () => useContext(FlightContext).open;
 export const useCloseTitle = () => useContext(FlightContext).close;
 export const useFlying = () => useContext(FlightContext).flying;
+export const useClosing = () => useContext(FlightContext).closing;
 
 export function FlightProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [flight, setFlight] = useState<Flight | null>(null);
   const [landed, setLanded] = useState(false);
-  /** Where the last opened title came from, so closing can fly back to it */
-  const origin = useRef<Flight | null>(null);
+  const [closing, setClosing] = useState(false);
+  /** One entry per open detail screen, so each close flies back to its own card */
+  const origins = useRef<(Flight | null)[]>([]);
 
   const open = useCallback<FlightContextValue['open']>(
     (title, from, radius = 14) => {
       const go = () => router.push({ pathname: '/title/[id]', params: { id: title.id } });
-      if (!from) return go();
-      from.measureInWindow((x, y, width, height) => {
-        if (!width || !height) return go();
-        const next = { title, rect: { x, y, width, height }, radius };
-        origin.current = next;
+      if (!from) {
+        origins.current.push(null);
+        return go();
+      }
+      from.measureInWindow((x, y, w, h) => {
+        if (!w || !h) {
+          origins.current.push(null);
+          return go();
+        }
+        const next = { title, rect: { x, y, width: w, height: h }, radius };
+        origins.current.push(next);
         setLanded(false);
         setFlight(next);
         go();
@@ -79,15 +96,25 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   );
 
   const close = useCallback<FlightContextValue['close']>(
-    (titleId) => {
-      const o = origin.current;
-      if (o && o.title.id === titleId) {
+    (titleId, scrollOffset = 0) => {
+      const o = origins.current.pop() ?? null;
+      const offset = Math.max(0, scrollOffset);
+      const canFly = !!o && o.title.id === titleId && offset < heroHeightFor(width) * 0.8;
+      setClosing(true);
+      if (canFly) {
         setLanded(true);
-        setFlight({ ...o, reverse: true });
+        setFlight({ ...o, reverse: true, offsetY: -offset });
       }
-      router.back();
+      // Screen stays mounted (and fades itself out) until the flight has landed
+      setTimeout(
+        () => {
+          router.back();
+          setClosing(false);
+        },
+        canFly ? DURATION : 220
+      );
     },
-    [router]
+    [router, width]
   );
 
   // The real hero takes over at 60% of the flight, hidden underneath until then.
@@ -98,8 +125,8 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   }, [flight]);
 
   const value = useMemo(
-    () => ({ open, close, flying: !!flight && !flight.reverse && !landed }),
-    [open, close, flight, landed]
+    () => ({ open, close, flying: !!flight && !flight.reverse && !landed, closing }),
+    [open, close, flight, landed, closing]
   );
 
   return (
@@ -112,7 +139,7 @@ export function FlightProvider({ children }: { children: ReactNode }) {
 
 function Overlay({ flight, onDone }: { flight: Flight; onDone: () => void }) {
   const { width } = useWindowDimensions();
-  const target = { x: 0, y: 0, width, height: heroHeightFor(width), radius: 0 };
+  const target = { x: 0, y: flight.offsetY ?? 0, width, height: heroHeightFor(width), radius: 0 };
   const reverse = !!flight.reverse;
   const p = useSharedValue(reverse ? 1 : 0);
   const uri = imageUrl(flight.title.posterPath, 'w780');
