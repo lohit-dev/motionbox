@@ -7,6 +7,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import colors from '@/constants/colors';
+import { LaunchSplash } from '@/components/LaunchSplash';
 import { FlightProvider } from '@/lib/flight';
 
 export default function Layout() {
@@ -29,6 +30,7 @@ export default function Layout() {
               <Stack.Screen name="person/[name]" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </FlightProvider>
+          <LaunchSplash />
         </SafeAreaProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
