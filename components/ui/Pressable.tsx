@@ -1,36 +1,33 @@
+import { useState } from 'react';
 import { Pressable as RNPressable, type PressableProps } from 'react-native';
-import { cssInterop } from 'nativewind';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
-import { springs } from '@/lib/motion';
-
-const AnimatedPressable = Animated.createAnimatedComponent(RNPressable);
-cssInterop(AnimatedPressable, { className: 'style' });
 
 interface Props extends Omit<PressableProps, 'style'> {
-  /** Scale while pressed. Release springs back. */
+  /** Scale while pressed. */
   scale?: number;
   className?: string;
   style?: object;
 }
 
-/** Pressable that shrinks slightly under the finger and springs back on release. */
+/**
+ * Pressable that shrinks slightly under the finger.
+ * className goes straight to the core Pressable so NativeWind always resolves it;
+ * the press scale is plain state rather than an animated wrapper.
+ */
 export function Pressable({ scale = 0.96, style, onPressIn, onPressOut, ...rest }: Props) {
-  const s = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+  const [down, setDown] = useState(false);
 
   return (
-    <AnimatedPressable
+    <RNPressable
       {...rest}
       onPressIn={(e) => {
-        s.value = withSpring(scale, springs.press);
+        setDown(true);
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        s.value = withSpring(1, springs.pop);
+        setDown(false);
         onPressOut?.(e);
       }}
-      style={[animated, style]}
+      style={[style, down ? { transform: [{ scale }] } : null]}
     />
   );
 }
