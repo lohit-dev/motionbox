@@ -19,6 +19,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 import { heroSlides, ringIds, updates } from '@/data/extras';
 import { getTitle, titles } from '@/data/titles';
+import { useTrending } from '@/hooks/useTrending';
 import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
 import type { Title } from '@/types';
@@ -42,6 +43,8 @@ export default function Home() {
     setOffline,
   } = useApp();
 
+  const [reload, setReload] = useState(0);
+  const trending = useTrending(reload);
   const [loading, setLoading] = useState(true);
   const [optionsFor, setOptionsFor] = useState<Title | null>(null);
   const [seen, setSeen] = useState<string[]>(['wolf', 'silent']);
@@ -61,7 +64,7 @@ export default function Home() {
   );
   const rings = known(ringIds);
   const resume = known(Object.keys(watching).filter((id) => !hiddenContinue.includes(id)));
-  const topTen = [...titles].sort((a, b) => a.popularity - b.popularity);
+  const topTen = [...trending.titles].sort((a, b) => a.popularity - b.popularity);
   const becauseSaved = known(getTitle('wolf')?.related ?? []);
   const comingSoon = titles.filter((t) => t.kind === 'movie');
   const series = titles.filter((t) => t.kind === 'series');
@@ -72,7 +75,7 @@ export default function Home() {
   return (
     <View className="flex-1 bg-ink">
       <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never">
-        {loading ? (
+        {loading || trending.loading ? (
           <View style={{ paddingTop: top + 60 }}>
             <Skeleton height={420} radius={0} />
             <Skeleton width={150} height={22} style={{ marginHorizontal: 20, marginTop: 32 }} />
@@ -83,9 +86,14 @@ export default function Home() {
           </View>
         ) : (
           <>
-            {offline ? (
+            {offline || trending.failed ? (
               <View style={{ paddingTop: top + 60 }}>
-                <OfflineBanner onRetry={() => setOffline(false)} />
+                <OfflineBanner
+                  onRetry={() => {
+                    setOffline(false);
+                    setReload((n) => n + 1);
+                  }}
+                />
               </View>
             ) : null}
             <HeroCarousel

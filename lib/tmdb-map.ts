@@ -43,7 +43,11 @@ function formatDate(iso?: string) {
 }
 
 /** Maps a TMDB result to the app's Title. Fields TMDB only returns on detail calls stay empty. */
-export function mapResult(r: TmdbResult, index: number, fallbackKind: 'movie' | 'tv' = 'movie'): Title | null {
+export function mapResult(
+  r: TmdbResult,
+  index: number,
+  fallbackKind: 'movie' | 'tv' = 'movie'
+): Title | null {
   const kind = (r.media_type ?? fallbackKind) === 'tv' ? 'series' : 'movie';
   if (r.media_type === 'person') return null;
   const date = r.release_date ?? r.first_air_date;
