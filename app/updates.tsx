@@ -26,7 +26,9 @@ export default function Updates() {
           scale={0.98}
           onPress={() => router.push({ pathname: '/title/[id]', params: { id: t.id } })}
           className="flex-row items-center gap-3 px-gutter py-3">
-          <View className={`h-2 w-2 rounded-full ${u.unread && !updatesRead ? 'bg-white' : 'bg-transparent'}`} />
+          <View
+            className={`h-2 w-2 rounded-full ${u.unread && !updatesRead ? 'bg-white' : 'bg-transparent'}`}
+          />
           <PosterArt title={t} width={46} height={68} radius={10} size="w185" />
           <View className="flex-1">
             <Text className="text-[15px] leading-[21px] text-white">
@@ -35,7 +37,10 @@ export default function Updates() {
             <Text className="mt-0.5 text-[12.5px] text-t3">{u.when}</Text>
           </View>
           {u.action ? (
-            <Chip label={u.action} onPress={() => router.push({ pathname: '/player/[id]', params: { id: t.id } })} />
+            <Chip
+              label={u.action}
+              onPress={() => router.push({ pathname: '/player/[id]', params: { id: t.id } })}
+            />
           ) : null}
         </Pressable>
       </Reveal>
@@ -44,17 +49,25 @@ export default function Updates() {
 
   return (
     <View className="flex-1 bg-ink">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: top + 8, paddingBottom: 40 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: top + 8, paddingBottom: 40 }}>
         <View className="flex-row items-center justify-between px-gutter">
           <CircleButton icon="back" label="Back" size={44} onPress={() => router.back()} />
           <Pressable accessibilityRole="button" scale={0.94} onPress={markUpdatesRead}>
             <Text className="text-[14px] font-semibold text-white">Mark all read</Text>
           </Pressable>
         </View>
-        <Text className="mt-4 px-gutter text-[32px] font-extrabold tracking-tighter text-white">Updates</Text>
-        <Text className="mx-gutter mb-1 mt-7 text-eyebrow font-semibold uppercase text-t3">Today</Text>
+        <Text className="mt-4 px-gutter text-[32px] font-extrabold tracking-tighter text-white">
+          Updates
+        </Text>
+        <Text className="mx-gutter mb-1 mt-7 text-eyebrow font-semibold uppercase text-t3">
+          Today
+        </Text>
         {updates.slice(0, 3).map(row)}
-        <Text className="mx-gutter mb-1 mt-7 text-eyebrow font-semibold uppercase text-t3">Earlier</Text>
+        <Text className="mx-gutter mb-1 mt-7 text-eyebrow font-semibold uppercase text-t3">
+          Earlier
+        </Text>
         {updates.slice(3).map((u, i) => row(u, i + 3))}
       </ScrollView>
     </View>
