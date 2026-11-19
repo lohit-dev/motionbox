@@ -25,14 +25,18 @@ export default function Person() {
 
   return (
     <View className="flex-1 bg-ink">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: top + 8, paddingBottom: 48 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: top + 8, paddingBottom: 48 }}>
         <View className="px-gutter">
           <CircleButton icon="back" label="Back" size={44} onPress={() => router.back()} />
         </View>
         {person ? (
           <Reveal style={{ alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }}>
             <Avatar name={person.name} size={112} />
-            <Text className="mt-4 text-[28px] font-extrabold tracking-tighter text-white">{person.name}</Text>
+            <Text className="mt-4 text-[28px] font-extrabold tracking-tighter text-white">
+              {person.name}
+            </Text>
             <Text className="mt-1 text-[14px] text-t3">{person.line}</Text>
             <View className="mt-5 w-full">
               <Pill
@@ -50,7 +54,11 @@ export default function Person() {
         {known.length ? (
           <>
             <SectionHeader title="Known for" />
-            <Rail data={known} keyExtractor={(t) => t.id} renderItem={(t) => <Poster title={t} showScore onPress={openTitle} />} />
+            <Rail
+              data={known}
+              keyExtractor={(t) => t.id}
+              renderItem={(t) => <Poster title={t} showScore onPress={openTitle} />}
+            />
           </>
         ) : null}
       </ScrollView>
