@@ -46,7 +46,8 @@ export default function Library() {
   const [sortOpen, setSortOpen] = useState(false);
 
   const data = useMemo(() => {
-    const ids = libraryTab === 'saved' ? saved : libraryTab === 'watching' ? Object.keys(watching) : watched;
+    const ids =
+      libraryTab === 'saved' ? saved : libraryTab === 'watching' ? Object.keys(watching) : watched;
     const list = ids.map((id) => getTitle(id)).filter((t): t is Title => !!t);
     if (sort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === 'rating') return [...list].sort((a, b) => b.score - a.score);
@@ -65,11 +66,20 @@ export default function Library() {
         title="Library"
         right={
           <View className="flex-row items-center gap-5">
-            <Pressable accessibilityRole="button" accessibilityLabel="Sort" scale={0.9} onPress={() => setSortOpen(true)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sort"
+              scale={0.9}
+              onPress={() => setSortOpen(true)}>
               <Icon name="sort" size={20} />
             </Pressable>
-            <Pressable accessibilityRole="button" scale={0.94} onPress={() => setEditing((e) => !e)}>
-              <Text className="text-[15px] font-semibold text-white">{editing ? 'Done' : 'Edit'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              scale={0.94}
+              onPress={() => setEditing((e) => !e)}>
+              <Text className="text-[15px] font-semibold text-white">
+                {editing ? 'Done' : 'Edit'}
+              </Text>
             </Pressable>
           </View>
         }
@@ -98,11 +108,17 @@ export default function Library() {
               <Poster
                 title={item}
                 width={106}
-                subtitle={libraryTab === 'watching' ? `${Math.round(watching[item.id] ?? 0)}% watched` : undefined}
+                subtitle={
+                  libraryTab === 'watching'
+                    ? `${Math.round(watching[item.id] ?? 0)}% watched`
+                    : undefined
+                }
                 onPress={editing ? () => remove(item) : open}
               />
               {editing ? (
-                <View pointerEvents="none" className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/70">
+                <View
+                  pointerEvents="none"
+                  className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/70">
                   <Icon name="close" size={13} />
                 </View>
               ) : null}
