@@ -16,6 +16,12 @@ export interface AppState {
   hiddenContinue: TitleId[];
   settings: Settings;
 
+  language: number;
+  updatesRead: boolean;
+  onboarded: boolean;
+  /** Demo switch for the offline state */
+  offline: boolean;
+
   libraryTab: LibraryTab;
   /** 0 = Sunday */
   airingDay: number;
@@ -28,6 +34,10 @@ export interface AppState {
   hideContinue: (id: TitleId) => void;
   clearHistory: () => void;
   setSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  setLanguage: (index: number) => void;
+  markUpdatesRead: () => void;
+  finishOnboarding: () => void;
+  setOffline: (offline: boolean) => void;
   setLibraryTab: (tab: LibraryTab) => void;
   setAiringDay: (day: number) => void;
   setAiringSegment: (segment: AiringSegment) => void;
@@ -43,6 +53,11 @@ export const useApp = create<AppState>((set) => ({
   reminders: ['empress', 'wolf'],
   hiddenContinue: [],
   settings: { reminders: true, autoplay: true },
+
+  language: 0,
+  updatesRead: false,
+  onboarded: false,
+  offline: false,
 
   libraryTab: 'saved',
   airingDay: new Date().getDay(),
@@ -63,6 +78,10 @@ export const useApp = create<AppState>((set) => ({
   hideContinue: (id) => set((s) => ({ hiddenContinue: [id, ...s.hiddenContinue] })),
   clearHistory: () => set({ watching: {}, watched: [], hiddenContinue: [] }),
   setSetting: (key, value) => set((s) => ({ settings: { ...s.settings, [key]: value } })),
+  setLanguage: (language) => set({ language }),
+  markUpdatesRead: () => set({ updatesRead: true }),
+  finishOnboarding: () => set({ onboarded: true }),
+  setOffline: (offline) => set({ offline }),
   setLibraryTab: (libraryTab) => set({ libraryTab }),
   setAiringDay: (airingDay) => set({ airingDay }),
   setAiringSegment: (airingSegment) => set({ airingSegment }),
