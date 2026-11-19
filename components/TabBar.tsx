@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
+import type { ComponentProps } from 'react';
 import { Pressable as RNPressable, View } from 'react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Tabs } from 'expo-router';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -14,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { springs } from '@/lib/motion';
+
+type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 const TABS: Record<string, { icon: IconName; label: string }> = {
   index: { icon: 'home', label: 'Home' },
