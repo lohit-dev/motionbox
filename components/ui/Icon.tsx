@@ -27,7 +27,11 @@ export type IconName =
   | 'sort'
   | 'thumb'
   | 'globe'
-  | 'trash';
+  | 'trash'
+  | 'wifiOff'
+  | 'pause'
+  | 'replay10'
+  | 'forward10';
 
 interface IconProps {
   name: IconName;
@@ -143,6 +147,23 @@ export function Icon({ name, size = 22, color = colors.white, filled = false }: 
           <Path {...line} d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
         </>
       )}
+      {name === 'wifiOff' && (
+        <>
+          <Path
+            {...line}
+            d="M2 8.8a15 15 0 0 1 20 0M5.5 12.4a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"
+          />
+          <Path {...line} d="M4 4l16 16" />
+        </>
+      )}
+      {name === 'pause' && (
+        <>
+          <Rect fill={color} x="6" y="4" width="4.2" height="16" rx="1.4" />
+          <Rect fill={color} x="13.8" y="4" width="4.2" height="16" rx="1.4" />
+        </>
+      )}
+      {name === 'replay10' && <Path {...line} d="M4 12a8 8 0 1 0 3-6.2M4 4v4.5h4.5" />}
+      {name === 'forward10' && <Path {...line} d="M20 12a8 8 0 1 1-3-6.2M20 4v4.5h-4.5" />}
       {name === 'trash' && <Path {...line} d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />}
     </Svg>
   );
