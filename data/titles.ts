@@ -190,4 +190,9 @@ export const titles: Title[] = [
 
 export const titleById: Record<string, Title> = Object.fromEntries(titles.map((t) => [t.id, t]));
 
+/** Makes titles loaded from TMDB reachable through getTitle(). */
+export const registerTitles = (list: Title[]) => {
+  for (const t of list) titleById[t.id] = t;
+};
+
 export const getTitle = (id: string): Title | undefined => titleById[id];
