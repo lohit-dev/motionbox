@@ -1,21 +1,29 @@
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { initials } from '@/lib/format';
+import { imageUrl } from '@/lib/tmdb';
 
 interface AvatarProps {
   name: string;
   size?: number;
+  /** TMDB profile path. Falls back to initials. */
+  photoPath?: string | null;
 }
 
-/** Initials in a grey circle, used for cast, reviewers and the profile. */
-export function Avatar({ name, size = 80 }: AvatarProps) {
+/** Profile photo when there is one, otherwise initials in a grey circle. */
+export function Avatar({ name, size = 80, photoPath }: AvatarProps) {
+  const uri = imageUrl(photoPath, 'w185');
   return (
     <View
-      className="items-center justify-center rounded-full border border-white/10 bg-s2"
+      className="items-center justify-center overflow-hidden rounded-full border border-white/10 bg-s2"
       style={{ width: size, height: size }}>
-      <Text className="font-bold text-white" style={{ fontSize: size * 0.32 }}>
-        {initials(name)}
-      </Text>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="cover" />
+      ) : (
+        <Text className="font-bold text-white" style={{ fontSize: size * 0.32 }}>
+          {initials(name)}
+        </Text>
+      )}
     </View>
   );
 }

@@ -1,4 +1,6 @@
-import type { Title } from '@/types';
+import type { Clip, Review, Title } from '@/types';
+
+export type { Clip, Review };
 
 export const episodeNames = [
   'The Crown Fits',
@@ -21,15 +23,6 @@ export const episodeBlurbs = [
   'Everyone is awake and nobody is safe.',
   'The last door opens onto the first problem.',
 ];
-
-export interface Review {
-  user: string;
-  initials: string;
-  when: string;
-  score: number;
-  likes: number;
-  text: string;
-}
 
 export const reviews: Review[] = [
   {
@@ -78,11 +71,6 @@ export const browseTiles = [
 
 export const recentSearches = ['wolf', 'horror', 'tom hale'];
 export const trendingSearches = ['Godzilla', 'The Odyssey', 'Empress', 'Silent Hill'];
-
-export interface Clip {
-  title: string;
-  length: string;
-}
 
 export const clipsOf = (t: Pick<Title, 'kind' | 'seasons'>): Clip[] =>
   t.kind === 'movie'

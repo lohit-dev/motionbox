@@ -1,10 +1,9 @@
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { PosterArt } from '@/components/PosterArt';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
-import type { Clip } from '@/data/extras';
-import type { Title } from '@/types';
+import type { Clip, Title } from '@/types';
 
 interface ClipCardProps {
   title: Title;
@@ -22,7 +21,17 @@ export function ClipCard({ title, clip, onPress }: ClipCardProps) {
       onPress={onPress}
       style={{ width: 220 }}>
       <View>
-        <PosterArt title={title} width={220} height={124} radius={16} />
+        {clip.key ? (
+          <View className="overflow-hidden rounded-[16px] border border-white/10 bg-s1">
+            <Image
+              source={{ uri: `https://img.youtube.com/vi/${clip.key}/hqdefault.jpg` }}
+              style={{ width: 220, height: 124 }}
+              resizeMode="cover"
+            />
+          </View>
+        ) : (
+          <PosterArt title={title} width={220} height={124} radius={16} />
+        )}
         <View className="absolute inset-0 items-center justify-center">
           <View className="h-11 w-11 items-center justify-center rounded-full bg-black/55 pl-0.5">
             <Icon name="play" size={16} />
