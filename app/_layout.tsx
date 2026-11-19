@@ -21,8 +21,13 @@ export default function Layout() {
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.ink },
                 animation: 'fade',
-              }}
-            />
+              }}>
+              <Stack.Screen name="player/[id]" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="trailers" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="person/[name]" options={{ animation: 'slide_from_right' }} />
+            </Stack>
           </FlightProvider>
         </SafeAreaProvider>
       </KeyboardProvider>
