@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -10,8 +9,9 @@ import { WeekStrip } from '@/components/WeekStrip';
 import { airing } from '@/data/airing';
 import { getTitle } from '@/data/titles';
 import { currentWeek } from '@/lib/calendar';
+import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
-import type { AiringSegment, Title } from '@/types';
+import type { AiringSegment } from '@/types';
 
 const SEGMENTS: { value: AiringSegment; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -19,7 +19,6 @@ const SEGMENTS: { value: AiringSegment; label: string }[] = [
 ];
 
 export default function Airing() {
-  const router = useRouter();
   const week = useMemo(() => currentWeek(), []);
   const { airingDay, airingSegment, reminders, setAiringDay, setAiringSegment, toggleReminder } =
     useApp();
@@ -27,7 +26,7 @@ export default function Airing() {
   const rows = (airing[airingDay] ?? []).filter(
     (e) => airingSegment === 'all' || reminders.includes(e.id)
   );
-  const open = (t: Title) => router.push({ pathname: '/title/[id]', params: { id: t.id } });
+  const open = useOpenTitle();
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>

@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
@@ -7,10 +6,10 @@ import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SearchField } from '@/components/SearchField';
 import { titles } from '@/data/titles';
-import type { Title } from '@/types';
+import { useOpenTitle } from '@/lib/flight';
+
 
 export default function Search() {
-  const router = useRouter();
   const [query, setQuery] = useState('');
 
   const results = useMemo(() => {
@@ -24,7 +23,7 @@ export default function Search() {
     );
   }, [query]);
 
-  const open = (t: Title) => router.push({ pathname: '/title/[id]', params: { id: t.id } });
+  const open = useOpenTitle();
 
   return (
     <View className="flex-1">
