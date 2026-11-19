@@ -4,6 +4,7 @@ import { Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -48,11 +49,24 @@ export default function TitleDetail() {
   const [episodesOpen, setEpisodesOpen] = useState(false);
 
   const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+    // Pull the page down past the top and let go to close it, like the Apple TV app
+    onEndDrag: (e) => {
+      if (e.contentOffset.y < -110) runOnJS(closeTitle)(id ?? '');
+    },
   });
 
   const heroHeight = heroHeightFor(width);
+  // Overscroll stretches the artwork instead of showing a gap
+  const heroStretch = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(scrollY.value, [-220, 0], [-110, 0], Extrapolation.CLAMP) },
+      { scale: interpolate(scrollY.value, [-220, 0], [1.4, 1], Extrapolation.CLAMP) },
+    ],
+  }));
   const heroText = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [0, heroHeight * 0.45], [1, 0], Extrapolation.CLAMP),
     transform: [
@@ -115,14 +129,16 @@ export default function TitleDetail() {
         showsVerticalScrollIndicator={false}
         bounces>
         <View style={{ width, height: heroHeight, opacity: flying ? 0 : 1 }}>
-          <PosterArt
-            title={title}
-            width={width}
-            height={heroHeight}
-            radius={0}
-            size="w780"
-            bordered={false}
-          />
+          <Animated.View style={heroStretch}>
+            <PosterArt
+              title={title}
+              width={width}
+              height={heroHeight}
+              radius={0}
+              size="w780"
+              bordered={false}
+            />
+          </Animated.View>
           <Fade />
           <Animated.View
             style={[
