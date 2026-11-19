@@ -28,7 +28,7 @@ import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { clipsOf, reviews } from '@/data/extras';
 import { getTitle } from '@/data/titles';
-import { heroHeightFor, useFlying, useOpenTitle } from '@/lib/flight';
+import { heroHeightFor, useCloseTitle, useFlying, useOpenTitle } from '@/lib/flight';
 import { kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
 import { useApp, useIsSaved } from '@/store/store';
@@ -38,6 +38,7 @@ export default function TitleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openTitle = useOpenTitle();
+  const closeTitle = useCloseTitle();
   const flying = useFlying();
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
@@ -250,7 +251,7 @@ export default function TitleDetail() {
             label="Back"
             size={44}
             tone="glass"
-            onPress={() => router.back()}
+            onPress={() => closeTitle(title.id)}
           />
           <CircleButton icon="more" label="More" size={44} tone="glass" />
         </View>
