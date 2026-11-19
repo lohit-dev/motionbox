@@ -34,8 +34,11 @@ export function ActionSheet({ visible, title, rows, onClose }: ActionSheetProps)
               r.onPress();
             }}
             className="h-[60px] flex-row items-center gap-3.5">
-            {r.icon ? <Icon name={r.icon} size={20} color={r.destructive ? colors.danger : colors.white} /> : null}
-            <Text className={`text-base font-semibold ${r.destructive ? 'text-danger' : 'text-white'}`}>
+            {r.icon ? (
+              <Icon name={r.icon} size={20} color={r.destructive ? colors.danger : colors.white} />
+            ) : null}
+            <Text
+              className={`text-base font-semibold ${r.destructive ? 'text-danger' : 'text-white'}`}>
               {r.label}
             </Text>
           </Pressable>

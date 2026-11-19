@@ -23,12 +23,23 @@ export function EpisodesSheet({ title, visible, onClose }: EpisodesSheetProps) {
 
   return (
     <Sheet visible={visible} onClose={onClose} title="Episodes" height={640}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0" contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="flex-grow-0"
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
         {seasons.map((s) => (
-          <Chip key={s} label={`Season ${s}`} selected={s === season} onPress={() => setSeason(s)} />
+          <Chip
+            key={s}
+            label={`Season ${s}`}
+            selected={s === season}
+            onPress={() => setSeason(s)}
+          />
         ))}
       </ScrollView>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
         {episodeNames.map((name, i) => (
           <Pressable
             key={name}

@@ -59,7 +59,8 @@ export function Sheet({ visible, onClose, height = 520, title, children }: Sheet
   return (
     <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }, scrimStyle]}>
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }, scrimStyle]}>
           <RNPressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close" />
         </Animated.View>
         <Animated.View

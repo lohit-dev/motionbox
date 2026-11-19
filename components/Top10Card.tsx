@@ -15,7 +15,15 @@ export function Top10Card({ rank, title, onPress }: Top10CardProps) {
     <View className="flex-row items-end" style={{ width: 168 }}>
       <Text
         className="font-extrabold text-white/90"
-        style={{ fontSize: 96, lineHeight: 96, letterSpacing: -6, marginRight: -14, marginBottom: 44, width: 64, textAlign: 'right' }}>
+        style={{
+          fontSize: 96,
+          lineHeight: 96,
+          letterSpacing: -6,
+          marginRight: -14,
+          marginBottom: 44,
+          width: 64,
+          textAlign: 'right',
+        }}>
         {rank}
       </Text>
       <Poster title={title} width={104} onPress={onPress} />

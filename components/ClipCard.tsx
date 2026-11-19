@@ -15,7 +15,12 @@ interface ClipCardProps {
 /** Landscape trailer or clip thumbnail with a duration chip. */
 export function ClipCard({ title, clip, onPress }: ClipCardProps) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={clip.title} scale={0.97} onPress={onPress} style={{ width: 220 }}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={clip.title}
+      scale={0.97}
+      onPress={onPress}
+      style={{ width: 220 }}>
       <View>
         <PosterArt title={title} width={220} height={124} radius={16} />
         <View className="absolute inset-0 items-center justify-center">
@@ -24,7 +29,9 @@ export function ClipCard({ title, clip, onPress }: ClipCardProps) {
           </View>
         </View>
         <View className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5">
-          <Text className="text-[11px] font-semibold text-white" style={{ fontVariant: ['tabular-nums'] }}>
+          <Text
+            className="text-[11px] font-semibold text-white"
+            style={{ fontVariant: ['tabular-nums'] }}>
             {clip.length}
           </Text>
         </View>

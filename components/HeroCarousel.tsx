@@ -89,15 +89,31 @@ export function HeroCarousel({
                 }}
                 collapsable={false}
                 style={{ width, height }}>
-                <PosterArt title={item.title} width={width} height={height} radius={0} size="w780" bordered={false} />
+                <PosterArt
+                  title={item.title}
+                  width={width}
+                  height={height}
+                  radius={0}
+                  size="w780"
+                  bordered={false}
+                />
               </View>
               <Fade />
               {on ? (
                 <Animated.View
                   key={`${item.title.id}-on`}
                   entering={FadeInDown.duration(620).easing(ease)}
-                  style={{ position: 'absolute', left: 0, right: 0, bottom: 34, alignItems: 'center', paddingHorizontal: 20 }}>
-                  <Text className="text-eyebrow font-semibold uppercase text-t2">{item.eyebrow}</Text>
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 34,
+                    alignItems: 'center',
+                    paddingHorizontal: 20,
+                  }}>
+                  <Text className="text-eyebrow font-semibold uppercase text-t2">
+                    {item.eyebrow}
+                  </Text>
                   <Text
                     onPress={() => onOpen(item.title, art.current[item.title.id] ?? null)}
                     className="mt-2 text-center text-[44px] font-extrabold leading-[46px] tracking-tighter text-white">
@@ -109,7 +125,11 @@ export function HeroCarousel({
                       label={saved(item.title.id) ? 'Remove from list' : 'Save to list'}
                       active={saved(item.title.id)}
                       onPress={() => onToggleSave(item.title.id)}>
-                      <Icon name={saved(item.title.id) ? 'check' : 'plus'} size={20} color={saved(item.title.id) ? '#0B0B0A' : '#fff'} />
+                      <Icon
+                        name={saved(item.title.id) ? 'check' : 'plus'}
+                        size={20}
+                        color={saved(item.title.id) ? '#0B0B0A' : '#fff'}
+                      />
                     </CircleButton>
                     <Pill title="Watch trailer" icon="play" onPress={() => onTrailer(item.title)} />
                   </View>
@@ -119,7 +139,9 @@ export function HeroCarousel({
           );
         }}
       />
-      <View pointerEvents="none" className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1.5">
+      <View
+        pointerEvents="none"
+        className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1.5">
         {slides.map((s, i) => (
           <View
             key={s.title.id}
