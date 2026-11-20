@@ -18,8 +18,8 @@ import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 import { heroSlides, ringIds, updates } from '@/data/extras';
-import { getTitle, titles } from '@/data/titles';
-import { useTrending } from '@/hooks/useTrending';
+import { getTitle } from '@/data/titles';
+import { useHome } from '@/hooks/useHome';
 import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
 import type { Title } from '@/types';
@@ -44,7 +44,7 @@ export default function Home() {
   } = useApp();
 
   const [reload, setReload] = useState(0);
-  const trending = useTrending(reload);
+  const home = useHome(reload);
   const [loading, setLoading] = useState(true);
   const [optionsFor, setOptionsFor] = useState<Title | null>(null);
   const [seen, setSeen] = useState<string[]>(['wolf', 'silent']);
@@ -55,19 +55,25 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  const slides = useMemo(
-    () =>
-      heroSlides.flatMap((s) =>
-        getTitle(s.id) ? [{ title: getTitle(s.id)!, eyebrow: s.eyebrow }] : []
-      ),
-    []
-  );
-  const rings = known(ringIds);
+  const live = home.source === 'tmdb';
+  const slides = useMemo(() => {
+    if (live) {
+      const eyebrows = ['No. 1 this week', 'Trending now', 'Trending now', 'Popular this week'];
+      return home.trending
+        .slice(0, 4)
+        .map((title, i) => ({ title, eyebrow: eyebrows[i] ?? 'Trending now' }));
+    }
+    return heroSlides.flatMap((s) =>
+      getTitle(s.id) ? [{ title: getTitle(s.id)!, eyebrow: s.eyebrow }] : []
+    );
+  }, [live, home.trending]);
+  const rings = live ? home.trending.slice(0, 8) : known(ringIds);
   const resume = known(Object.keys(watching).filter((id) => !hiddenContinue.includes(id)));
-  const topTen = [...trending.titles].sort((a, b) => a.popularity - b.popularity);
-  const becauseSaved = known(getTitle('wolf')?.related ?? []);
-  const comingSoon = titles.filter((t) => t.kind === 'movie');
-  const series = titles.filter((t) => t.kind === 'series');
+  const topTen = [...home.trending].sort((a, b) => a.popularity - b.popularity);
+  const savedFirst = saved.length ? getTitle(saved[0]) : undefined;
+  const becauseSaved = known(savedFirst?.related ?? []);
+  const comingSoon = home.upcoming;
+  const series = home.series;
   const unread = !updatesRead && updates.some((u) => u.unread);
 
   const trailer = (t: Title) => router.push({ pathname: '/player/[id]', params: { id: t.id } });
@@ -75,7 +81,7 @@ export default function Home() {
   return (
     <View className="flex-1 bg-ink">
       <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never">
-        {loading || trending.loading ? (
+        {loading || home.loading ? (
           <View style={{ paddingTop: top + 60 }}>
             <Skeleton height={420} radius={0} />
             <Skeleton width={150} height={22} style={{ marginHorizontal: 20, marginTop: 32 }} />
@@ -86,7 +92,7 @@ export default function Home() {
           </View>
         ) : (
           <>
-            {offline || trending.failed ? (
+            {offline || home.failed ? (
               <View style={{ paddingTop: top + 60 }}>
                 <OfflineBanner
                   onRetry={() => {
@@ -148,12 +154,16 @@ export default function Home() {
               renderItem={(t, i) => <Top10Card rank={i + 1} title={t} onPress={openTitle} />}
             />
 
-            <SectionHeader title="Because you saved Wolf" />
-            <Rail
-              data={becauseSaved}
-              keyExtractor={key}
-              renderItem={(t) => <Poster title={t} tag="NEW" onPress={openTitle} />}
-            />
+            {savedFirst && becauseSaved.length ? (
+              <>
+                <SectionHeader title={`Because you saved ${savedFirst.name}`} />
+                <Rail
+                  data={becauseSaved}
+                  keyExtractor={key}
+                  renderItem={(t) => <Poster title={t} tag="NEW" onPress={openTitle} />}
+                />
+              </>
+            ) : null}
 
             <SectionHeader title="Coming soon" />
             <Rail
