@@ -1,6 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Linking, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -8,6 +8,7 @@ import Animated, {
   FadeInDown,
   interpolate,
   runOnJS,
+  useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -18,6 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import colors from '@/constants/colors';
+import { ActionSheet } from '@/components/ActionSheet';
 import { Avatar } from '@/components/Avatar';
 import { ClipCard } from '@/components/ClipCard';
 import { EpisodesSheet } from '@/components/EpisodesSheet';
@@ -28,22 +30,20 @@ import { Rail } from '@/components/Rail';
 import { ReviewCard } from '@/components/ReviewCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton } from '@/components/Skeleton';
+import { TitleLogo } from '@/components/TitleLogo';
 import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
-import { clipsOf, reviews as seedReviews } from '@/data/extras';
-import { getTitle } from '@/data/titles';
-import { useTitle } from '@/hooks/useTitle';
+import { useTitle, useTitles } from '@/hooks/useTitle';
 import { parseId } from '@/lib/api';
 import { heroHeightFor, useClosing, useCloseTitle, useFlying, useOpenTitle } from '@/lib/flight';
 import { genreLine, kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
-import { imageUrl } from '@/lib/tmdb';
+import { getTitle } from '@/lib/titles';
+import { openClip, openTrailer } from '@/lib/trailer';
 import { useApp, useIsSaved } from '@/store/store';
-import type { Clip, Title } from '@/types';
-
-const LANGUAGES = ['English', 'Hindi', 'Telugu'];
+import type { Clip } from '@/types';
 
 export default function TitleDetail() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
@@ -51,15 +51,21 @@ export default function TitleDetail() {
   const openTitle = useOpenTitle();
   const closeTitle = useCloseTitle();
   const flying = useFlying();
-  const closing = useClosing();
+  const closing = useClosing(id);
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
   const { title, loading, failed } = useTitle(id);
   const toggleSave = useApp((s) => s.toggleSave);
-  const progress = useApp((s) => s.watching[id]);
-  const language = useApp((s) => s.language);
+  const watching = useApp((s) => s.watching.includes(id));
+  const watched = useApp((s) => s.watched.includes(id));
+  const toggleWatching = useApp((s) => s.toggleWatching);
+  const markWatched = useApp((s) => s.markWatched);
+  const unmarkWatched = useApp((s) => s.unmarkWatched);
   const saved = useIsSaved(id);
+  const { titles: related } = useTitles(title?.related ?? []);
   const [episodesOpen, setEpisodesOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [noTrailer, setNoTrailer] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // Was this screen opened by a card flying into it? Decides which entrance to play.
@@ -122,11 +128,15 @@ export default function TitleDetail() {
     opacity: interpolate(scrollY.value, [300, 420], [0, 1], Extrapolation.CLAMP),
   }));
   // Floating bar springs up once the hero buttons have scrolled under the top bar
-  const dock = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: withSpring(scrollY.value > heroHeight - 130 ? 0 : 160, springs.pop) },
-    ],
-  }));
+  const dockY = useSharedValue(160);
+  useAnimatedReaction(
+    () => scrollY.value > heroHeight - 130,
+    (show, was) => {
+      if (show !== was) dockY.value = withSpring(show ? 0 : 160, springs.pop);
+    },
+    [heroHeight]
+  );
+  const dock = useAnimatedStyle(() => ({ transform: [{ translateY: dockY.value }] }));
 
   // The root stack can be entered without a dynamic segment on a fresh native launch.
   // Never leave the user stranded on an empty detail route.
@@ -153,23 +163,20 @@ export default function TitleDetail() {
   }
 
   const series = title.kind === 'series';
-  const seeded = !parseId(title.id);
-  const related = title.related.map((rid) => getTitle(rid)).filter((t): t is Title => !!t);
-  const clips: Clip[] = title.clips ?? (seeded ? clipsOf(title) : []);
-  const reviews = title.reviews ?? (seeded ? seedReviews : []);
-  const firstClip = title.clips?.find((c) => c.key);
+  const clips: Clip[] = title.clips ?? [];
+  const reviews = title.reviews ?? [];
+  const noClips = noTrailer || (!!title.detailed && !clips.some((c) => c.key));
 
-  const playTrailer = () => {
-    if (firstClip?.key) Linking.openURL(`https://www.youtube.com/watch?v=${firstClip.key}`);
-    else router.push({ pathname: '/player/[id]', params: { id: title.id } });
+  const playTrailer = async () => {
+    if (noClips) return;
+    if (!(await openTrailer(title))) setNoTrailer(true);
   };
   const playClip = (clip: Clip) => {
-    if (clip.key) Linking.openURL(`https://www.youtube.com/watch?v=${clip.key}`);
-    else playTrailer();
+    if (clip.key) openClip(clip.key);
   };
   const share = () => Share.share({ message: `${title.name} on Motion Box` });
 
-  const label = series ? (progress ? 'Resume S1 · E3' : 'Play S1 · E1') : 'Watch trailer';
+  const label = noClips ? 'No trailer yet' : 'Watch trailer';
 
   const actions = (
     <View className="flex-row items-center gap-3">
@@ -179,7 +186,13 @@ export default function TitleDetail() {
         onPress={() => toggleSave(title.id)}>
         <Icon name="bookmark" size={20} color={saved ? colors.ink : colors.white} filled={saved} />
       </CircleButton>
-      <Pill title={label} icon="play" className="flex-1" onPress={playTrailer} />
+      <Pill
+        title={label}
+        icon="play"
+        tone={noClips ? 'ghost' : 'primary'}
+        className="flex-1"
+        onPress={playTrailer}
+      />
       <CircleButton icon="share" label="Share" onPress={share} />
     </View>
   );
@@ -193,7 +206,7 @@ export default function TitleDetail() {
       ['Released', title.released],
       [series ? 'Creator' : 'Director', title.director],
       [series ? 'Network' : 'Studio', title.studio],
-      ['Language', LANGUAGES[language] ?? 'English'],
+      ['Language', title.language ?? ''],
       ['Genres', title.genres.join(' · ')],
       ['Seasons', series && title.seasons ? String(title.seasons) : ''],
     ] as [string, string][]
@@ -238,52 +251,41 @@ export default function TitleDetail() {
             <Fade />
             <Animated.View
               entering={enter(324, 280)}
-              style={[
-                {
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 20,
-                  alignItems: 'center',
-                  paddingHorizontal: 20,
-                },
-                heroText,
-              ]}>
-              <Text className="text-eyebrow font-semibold uppercase text-t2">
-                {kindLine(title)}
-              </Text>
-              {title.logoPath ? (
-                <Image
-                  source={{ uri: imageUrl(title.logoPath, 'w780') ?? undefined }}
-                  resizeMode="contain"
-                  accessibilityLabel={title.name}
-                  style={{ width: '88%', height: 104, marginTop: 8 }}
-                />
-              ) : (
-                <Text
-                  numberOfLines={2}
-                  className="mt-2 text-center text-[40px] font-extrabold leading-[42px] tracking-tighter text-white">
-                  {title.name}
+              pointerEvents="box-none"
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 20 }}>
+              <Animated.View
+                pointerEvents="box-none"
+                style={[{ alignItems: 'center', paddingHorizontal: 20 }, heroText]}>
+                <Text className="text-eyebrow font-semibold uppercase text-t2">
+                  {kindLine(title)}
                 </Text>
-              )}
-              <View className="mt-3 flex-row items-center gap-3">
-                <View className="flex-row items-center gap-1">
-                  <Icon name="star" size={13} />
-                  <Text className="text-[13px] font-semibold text-white">
-                    {title.score.toFixed(1)}
-                  </Text>
+                <View className="mt-2 items-center">
+                  <TitleLogo
+                    title={title}
+                    maxWidth={Math.min(width * 0.8, 420)}
+                    maxHeight={110}
+                    fontSize={36}
+                  />
                 </View>
-                {title.runtime ? (
-                  <Text className="text-[13px] text-t2">{title.runtime}</Text>
-                ) : null}
-                {title.rating ? (
-                  <View className="rounded border border-white/30 px-1.5 py-0.5">
-                    <Text className="text-[11px] font-semibold text-t2">{title.rating}</Text>
+                <View className="mt-3 flex-row items-center gap-3">
+                  <View className="flex-row items-center gap-1">
+                    <Icon name="star" size={13} />
+                    <Text className="text-[13px] font-semibold text-white">
+                      {title.score.toFixed(1)}
+                    </Text>
                   </View>
-                ) : null}
-              </View>
-              <Text className="mt-2 text-[13px] text-t2">{genreLine(title)}</Text>
-              <View className="mt-5 w-full">{actions}</View>
+                  {title.runtime ? (
+                    <Text className="text-[13px] text-t2">{title.runtime}</Text>
+                  ) : null}
+                  {title.rating ? (
+                    <View className="rounded border border-white/30 px-1.5 py-0.5">
+                      <Text className="text-[11px] font-semibold text-t2">{title.rating}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text className="mt-2 text-[13px] text-t2">{genreLine(title)}</Text>
+                <View className="mt-5 w-full">{actions}</View>
+              </Animated.View>
             </Animated.View>
           </View>
 
@@ -297,15 +299,17 @@ export default function TitleDetail() {
               ) : null}
             </Text>
 
-            {series && seeded ? (
+            {series ? (
               <Pressable
                 accessibilityRole="button"
                 scale={0.98}
                 onPress={() => setEpisodesOpen(true)}
                 className="mx-gutter mt-6 h-14 flex-row items-center justify-between rounded-card bg-s1 px-4">
                 <Text className="text-base font-semibold text-white">
-                  Episodes · {title.seasons ?? 1}{' '}
-                  {(title.seasons ?? 1) === 1 ? 'season' : 'seasons'}
+                  Episodes
+                  {title.seasons
+                    ? ` · ${title.seasons} ${title.seasons === 1 ? 'season' : 'seasons'}`
+                    : ''}
                 </Text>
                 <Icon name="chevronRight" size={18} color={colors.t3} />
               </Pressable>
@@ -339,14 +343,14 @@ export default function TitleDetail() {
                 <SectionHeader title="Cast & crew" />
                 <Rail
                   data={title.cast}
-                  keyExtractor={(c) => c.name}
+                  keyExtractor={(c) => `${c.id}-${c.role}`}
                   gap={16}
                   renderItem={(c) => (
                     <Pressable
                       accessibilityRole="button"
                       scale={0.95}
                       onPress={() =>
-                        router.push({ pathname: '/person/[name]', params: { name: c.name } })
+                        router.push({ pathname: '/person/[id]', params: { id: String(c.id) } })
                       }
                       className="items-center"
                       style={{ width: 84 }}>
@@ -452,7 +456,13 @@ export default function TitleDetail() {
               ]}>
               {title.name}
             </Animated.Text>
-            <CircleButton icon="more" label="More" size={44} tone="glass" onPress={share} />
+            <CircleButton
+              icon="more"
+              label="More"
+              size={44}
+              tone="glass"
+              onPress={() => setMoreOpen(true)}
+            />
           </View>
         </Animated.View>
 
@@ -460,17 +470,40 @@ export default function TitleDetail() {
         <Animated.View
           pointerEvents="box-none"
           style={[{ position: 'absolute', left: 20, right: 20, bottom: bottom + 12 }, dock]}>
-          <View className="rounded-full bg-s1/95 p-2">{actions}</View>
+          <View className="rounded-full border border-white/10 bg-s2 p-2">{actions}</View>
         </Animated.View>
       </Animated.View>
 
-      {series && seeded ? (
+      {series ? (
         <EpisodesSheet
           title={title}
           visible={episodesOpen}
           onClose={() => setEpisodesOpen(false)}
         />
       ) : null}
+      <ActionSheet
+        visible={moreOpen}
+        title={title.name}
+        onClose={() => setMoreOpen(false)}
+        rows={[
+          {
+            label: saved ? 'Remove from list' : 'Save to list',
+            icon: 'bookmark',
+            onPress: () => toggleSave(title.id),
+          },
+          {
+            label: watching ? 'Stop watching' : 'Mark as watching',
+            icon: 'play',
+            onPress: () => toggleWatching(title.id),
+          },
+          {
+            label: watched ? 'Remove from watched' : 'Mark as watched',
+            icon: 'check',
+            onPress: () => (watched ? unmarkWatched(title.id) : markWatched(title.id)),
+          },
+          { label: 'Share', icon: 'share', onPress: share },
+        ]}
+      />
     </View>
   );
 }

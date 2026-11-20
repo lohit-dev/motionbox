@@ -6,7 +6,13 @@ import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 
 /** Inline offline notice with a retry. Errors stay inline, never in a modal. */
-export function OfflineBanner({ onRetry }: { onRetry: () => void }) {
+export function OfflineBanner({
+  onRetry,
+  message = 'Could not reach TMDB. Check your connection and try again.',
+}: {
+  onRetry: () => void;
+  message?: string;
+}) {
   return (
     <Animated.View
       entering={FadeInDown.duration(320)}
@@ -23,7 +29,7 @@ export function OfflineBanner({ onRetry }: { onRetry: () => void }) {
       }}>
       <Icon name="wifiOff" size={20} color={colors.t2} />
       <Text className="flex-1 text-[14px] leading-5 text-t2">
-        You are offline. Showing what was saved last time.
+        {message}
       </Text>
       <Pressable accessibilityRole="button" onPress={onRetry} scale={0.94}>
         <Text className="text-[14px] font-bold text-white">Retry</Text>
