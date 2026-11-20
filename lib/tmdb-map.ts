@@ -111,6 +111,7 @@ const episodeAir = (e?: RawEpisodeAir | null) =>
 export interface TmdbDetail extends TmdbResult {
   images?: {
     logos?: { file_path: string; iso_639_1: string | null }[];
+    posters?: { file_path: string; iso_639_1: string | null; vote_average: number }[];
   };
   genres?: { id: number; name: string }[];
   original_language?: string;
@@ -231,6 +232,11 @@ export function mapDetail(
       .map((x) => ({ number: x.season_number, name: x.name, episodeCount: x.episode_count })),
     nextEpisode: episodeAir(raw.next_episode_to_air),
     lastEpisode: episodeAir(raw.last_episode_to_air),
+    // Poster without baked-in lettering, so the logo never doubles up with the artwork
+    heroPath:
+      [...(raw.images?.posters ?? [])]
+        .filter((x) => x.iso_639_1 === null)
+        .sort((a, b) => b.vote_average - a.vote_average)[0]?.file_path ?? null,
     logoPath:
       raw.images?.logos?.find((logo) => logo.iso_639_1 === 'en')?.file_path ??
       raw.images?.logos?.find((logo) => logo.iso_639_1 === null)?.file_path ??

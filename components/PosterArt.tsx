@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { memo, useId } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
@@ -6,7 +6,11 @@ import { imageUrl, type PosterSize } from '@/lib/tmdb';
 import type { Title } from '@/types';
 
 interface PosterArtProps {
-  title: Pick<Title, 'name' | 'posterPath'>;
+  title: Pick<Title, 'name' | 'posterPath'> & { heroPath?: string | null };
+  /** Use the textless poster when one exists, for art that sits behind a logo */
+  textless?: boolean;
+  /** Draw the title on generated art. Off for tiles that carry their own label. */
+  showName?: boolean;
   width: number;
   height: number;
   radius?: number;
@@ -39,7 +43,17 @@ function palette(name: string) {
   return { a: hsl(h, 34, 30), b: hsl((h + 28) % 360, 40, 9), glow: hsl((h + 12) % 360, 55, 46) };
 }
 
-function GeneratedArt({ name, width, height }: { name: string; width: number; height: number }) {
+function GeneratedArt({
+  name,
+  width,
+  height,
+  showName,
+}: {
+  name: string;
+  width: number;
+  height: number;
+  showName: boolean;
+}) {
   const id = `g${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const p = palette(name);
   const big = width >= 120;
@@ -69,7 +83,7 @@ function GeneratedArt({ name, width, height }: { name: string; width: number; he
           {name.trim().charAt(0).toUpperCase()}
         </Text>
       </View>
-      {big && height <= 280 ? (
+      {showName && big && height <= 280 ? (
         <View className="absolute inset-x-0 bottom-0 p-2.5">
           <Text numberOfLines={2} className="text-[13px] font-bold leading-4 text-white">
             {name}
@@ -81,15 +95,17 @@ function GeneratedArt({ name, width, height }: { name: string; width: number; he
 }
 
 /** Poster image, falling back to generated artwork until a real poster is available. */
-export function PosterArt({
+function PosterArtBase({
   title,
   width,
   height,
   radius = 14,
   size = 'w500',
   bordered = true,
+  textless = false,
+  showName = true,
 }: PosterArtProps) {
-  const uri = imageUrl(title.posterPath, size);
+  const uri = imageUrl((textless && title.heroPath) || title.posterPath, size);
   return (
     <View
       className={`overflow-hidden bg-s1 ${bordered ? 'border border-white/10' : ''}`}
@@ -97,8 +113,11 @@ export function PosterArt({
       {uri ? (
         <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
       ) : (
-        <GeneratedArt name={title.name} width={width} height={height} />
+        <GeneratedArt name={title.name} width={width} height={height} showName={showName} />
       )}
     </View>
   );
 }
+
+/** Memoised: grids re-render often while images load, and artwork props rarely change. */
+export const PosterArt = memo(PosterArtBase);

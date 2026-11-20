@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/Icon';
@@ -20,7 +20,7 @@ interface PosterProps {
   onPress?: (title: Title, art: View | null) => void;
 }
 
-export function Poster({
+function PosterBase({
   title,
   width = 112,
   tag,
@@ -65,3 +65,5 @@ export function Poster({
     </Pressable>
   );
 }
+
+export const Poster = memo(PosterBase);
