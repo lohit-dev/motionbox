@@ -42,7 +42,10 @@ const TABS: { value: Tab; label: string }[] = [
 ];
 
 const activeCount = (f: Filters) =>
-  f.genres.length + (f.minScore ? 1 : 0) + (f.kind !== 'all' ? 1 : 0) + (f.sort !== 'popular' ? 1 : 0);
+  f.genres.length +
+  (f.minScore ? 1 : 0) +
+  (f.kind !== 'all' ? 1 : 0) +
+  (f.sort !== 'popular' ? 1 : 0);
 
 const COLUMNS = 3;
 const GAP = 12;
@@ -77,7 +80,13 @@ export default function Search() {
     [home.trending]
   );
 
-  const tab: Tab = people ? 'people' : filters.kind === 'movie' ? 'movie' : filters.kind === 'series' ? 'series' : 'all';
+  const tab: Tab = people
+    ? 'people'
+    : filters.kind === 'movie'
+      ? 'movie'
+      : filters.kind === 'series'
+        ? 'series'
+        : 'all';
   const pickTab = (next: Tab) => {
     setPeople(next === 'people');
     if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
@@ -114,7 +123,9 @@ export default function Search() {
               selected
               label={g}
               trailingIcon="close"
-              onPress={() => setFilters({ ...filters, genres: filters.genres.filter((x) => x !== g) })}
+              onPress={() =>
+                setFilters({ ...filters, genres: filters.genres.filter((x) => x !== g) })
+              }
             />
           ))}
           {filters.minScore ? (
@@ -235,7 +246,9 @@ export default function Search() {
             search.loading ? null : (
               <EmptyState
                 title="No people found"
-                body={text ? `Nothing for “${text}”.` : 'Type a name to look for actors and directors.'}
+                body={
+                  text ? `Nothing for “${text}”.` : 'Type a name to look for actors and directors.'
+                }
               />
             )
           }
@@ -243,7 +256,9 @@ export default function Search() {
             <Pressable
               accessibilityRole="button"
               scale={0.98}
-              onPress={() => router.push({ pathname: '/person/[id]', params: { id: String(item.id) } })}
+              onPress={() =>
+                router.push({ pathname: '/person/[id]', params: { id: String(item.id) } })
+              }
               className="flex-row items-center gap-3 px-gutter py-2.5">
               <Avatar name={item.name} size={52} photoPath={item.photoPath} />
               <View className="flex-1">
@@ -314,7 +329,9 @@ export default function Search() {
             )}
           />
           {/* Soft edge so posters fade out under the search field instead of being cut */}
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 18 }}>
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 18 }}>
             <Fade from="top" hold={0.1} />
           </View>
         </View>
