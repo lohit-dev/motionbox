@@ -93,7 +93,7 @@ function TabItem({
 }
 
 /** Flat docked tab bar. The active tab is a white capsule that springs open. */
-export function TabBar({ state, navigation }: BottomTabBarProps) {
+export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { bottom } = useSafeAreaInsets();
 
   return (
@@ -111,13 +111,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             icon={meta.icon}
             label={meta.label}
             onPress={() => {
-              const event = navigation.emit({
+              const event = emitter.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!focused && !event.defaultPrevented)
-                navigation.navigate(route.name, route.params);
+                navigateToTab(route.key);
             }}
           />
         );

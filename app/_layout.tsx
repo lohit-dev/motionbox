@@ -2,7 +2,7 @@ import '../global.css';
 
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, TurboModuleRegistry } from 'react-native';
+import { LogBox, Platform, TurboModuleRegistry } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,7 +18,13 @@ const AndroidSystemBars =
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
+
+// NativeWind v4 imports this deprecated component internally; keep that
+// third-party warning from triggering the broken React Native dev toast.
+LogBox.ignoreLogs(['ImageBackground is deprecated and will be removed in a future release.']);
+LogBox.ignoreLogs(['`unstable_settings.initialRouteName` is deprecated. Use `unstable_settings.anchor` instead.']);
 
 export default function Layout() {
   return (
