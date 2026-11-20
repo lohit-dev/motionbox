@@ -1,6 +1,14 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FlatList,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { EmptyState } from '@/components/EmptyState';
@@ -24,7 +32,10 @@ const TABS: { value: LibraryTab; label: string }[] = [
 
 const EMPTY: Record<LibraryTab, [string, string]> = {
   saved: ['Nothing saved yet', 'Tap the bookmark on any title to keep it here.'],
-  watching: ['Nothing in progress', 'Mark a title as watching from its ⋯ menu and it will wait for you here.'],
+  watching: [
+    'Nothing in progress',
+    'Mark a title as watching from its ⋯ menu and it will wait for you here.',
+  ],
   watched: ['Nothing watched yet', 'Mark a title as watched from its ⋯ menu and it shows up here.'],
 };
 
@@ -38,18 +49,27 @@ const SORTS: { value: Sort; label: string }[] = [
 const COLUMNS = 3;
 const GAP = 12;
 
-export default function Library() {
+const REMOVE = {
+  saved: (s: ReturnType<typeof useApp.getState>) => s.toggleSave,
+  watching: (s: ReturnType<typeof useApp.getState>) => s.toggleWatching,
+  watched: (s: ReturnType<typeof useApp.getState>) => s.unmarkWatched,
+};
+
+interface PageProps {
+  tab: LibraryTab;
+  sort: Sort;
+  editing: boolean;
+  width: number;
+}
+
+/** One tab's grid. Each page keeps its own scroll position while swiping between tabs. */
+function Page({ tab, sort, editing, width }: PageProps) {
   const router = useRouter();
   const open = useOpenTitle();
-  const { libraryTab, setLibraryTab, saved, watching, watched } = useApp();
-  const toggleSave = useApp((s) => s.toggleSave);
-  const toggleWatching = useApp((s) => s.toggleWatching);
-  const unmarkWatched = useApp((s) => s.unmarkWatched);
-  const [editing, setEditing] = useState(false);
-  const [sort, setSort] = useState<Sort>('recent');
-  const [sortOpen, setSortOpen] = useState(false);
-
-  const ids = libraryTab === 'saved' ? saved : libraryTab === 'watching' ? watching : watched;
+  const ids = useApp((s) =>
+    tab === 'saved' ? s.saved : tab === 'watching' ? s.watching : s.watched
+  );
+  const remove = useApp(REMOVE[tab]);
   const { titles, loading } = useTitles(ids);
 
   const data = useMemo(() => {
@@ -58,10 +78,94 @@ export default function Library() {
     return titles;
   }, [titles, sort]);
 
-  const remove = (t: Title) => {
-    if (libraryTab === 'saved') toggleSave(t.id);
-    else if (libraryTab === 'watching') toggleWatching(t.id);
-    else unmarkWatched(t.id);
+  const poster = (width - 40 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+  return (
+    <View style={{ width }}>
+      <FlatList
+        data={data}
+        numColumns={COLUMNS}
+        keyExtractor={(t) => t.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 20, paddingBottom: 140, gap: GAP }}
+        columnWrapperStyle={{ gap: GAP }}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews
+        ListEmptyComponent={
+          loading ? (
+            <View className="flex-row" style={{ gap: GAP }}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} width={poster} height={poster * 1.5} radius={14} />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              title={EMPTY[tab][0]}
+              body={EMPTY[tab][1]}
+              action="Browse trending"
+              onAction={() => router.navigate('/search')}
+            />
+          )
+        }
+        renderItem={({ item, index }) => (
+          <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
+            <View>
+              <Poster
+                title={item}
+                width={poster}
+                onPress={editing ? () => remove(item.id) : open}
+              />
+              {editing ? (
+                <View
+                  pointerEvents="none"
+                  className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/70">
+                  <Icon name="close" size={13} />
+                </View>
+              ) : null}
+            </View>
+          </Reveal>
+        )}
+      />
+    </View>
+  );
+}
+
+export default function Library() {
+  const { width } = useWindowDimensions();
+  const libraryTab = useApp((s) => s.libraryTab);
+  const setLibraryTab = useApp((s) => s.setLibraryTab);
+  const [editing, setEditing] = useState(false);
+  const [sort, setSort] = useState<Sort>('recent');
+  const [sortOpen, setSortOpen] = useState(false);
+  const pager = useRef<ScrollView>(null);
+  const page = useRef(TABS.findIndex((t) => t.value === libraryTab));
+
+  const goTo = useCallback(
+    (tab: LibraryTab) => {
+      const i = TABS.findIndex((t) => t.value === tab);
+      page.current = i;
+      setLibraryTab(tab);
+      pager.current?.scrollTo({ x: i * width, animated: true });
+    },
+    [setLibraryTab, width]
+  );
+
+  // Land on the remembered tab without animating
+  useEffect(() => {
+    pager.current?.scrollTo({ x: page.current * width, animated: false });
+  }, [width]);
+
+  // Tabs follow the finger: switch as soon as the swipe passes halfway
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const i = Math.max(
+      0,
+      Math.min(TABS.length - 1, Math.round(e.nativeEvent.contentOffset.x / width))
+    );
+    if (i !== page.current) {
+      page.current = i;
+      setLibraryTab(TABS[i].value);
+    }
   };
 
   return (
@@ -88,51 +192,20 @@ export default function Library() {
           </View>
         }
       />
-      <UnderlineTabs tabs={TABS} value={libraryTab} onChange={setLibraryTab} />
-      <FlatList
-        // a new key remounts the grid so the entrance replays on tab change
-        key={`${libraryTab}-${sort}`}
-        data={data}
-        numColumns={COLUMNS}
-        keyExtractor={(t) => t.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, gap: GAP }}
-        columnWrapperStyle={{ gap: GAP }}
-        ListEmptyComponent={
-          loading ? (
-            <View className="flex-row gap-3">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} width={106} height={159} radius={14} />
-              ))}
-            </View>
-          ) : (
-          <EmptyState
-            title={EMPTY[libraryTab][0]}
-            body={EMPTY[libraryTab][1]}
-            action="Browse trending"
-            onAction={() => router.navigate('/search')}
-          />
-          )
-        }
-        renderItem={({ item, index }) => (
-          <Reveal index={index} style={{ flex: 1 / COLUMNS }}>
-            <View>
-              <Poster
-                title={item}
-                width={106}
-                onPress={editing ? () => remove(item) : open}
-              />
-              {editing ? (
-                <View
-                  pointerEvents="none"
-                  className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-black/70">
-                  <Icon name="close" size={13} />
-                </View>
-              ) : null}
-            </View>
-          </Reveal>
-        )}
-      />
+      <UnderlineTabs tabs={TABS} value={libraryTab} onChange={goTo} />
+      <ScrollView
+        ref={pager}
+        horizontal
+        pagingEnabled
+        bounces={false}
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={onScroll}
+        style={{ flex: 1 }}>
+        {TABS.map((t) => (
+          <Page key={t.value} tab={t.value} sort={sort} editing={editing} width={width} />
+        ))}
+      </ScrollView>
       <ActionSheet
         visible={sortOpen}
         title="Sort by"
