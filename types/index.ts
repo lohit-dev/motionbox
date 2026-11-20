@@ -48,6 +48,8 @@ export interface Title {
   related: TitleId[];
   posterPath: string | null;
   backdropPath: string | null;
+  /** TMDB localized title logo, when available */
+  logoPath?: string | null;
   /** Set once the full TMDB detail has been loaded */
   detailed?: boolean;
   tagline?: string;

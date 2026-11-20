@@ -17,13 +17,19 @@ export async function tmdb<T>(path: string, params: Params = {}, signal?: AbortS
   const token = process.env.EXPO_PUBLIC_TMDB_TOKEN;
   if (!token) throw new Error('Missing EXPO_PUBLIC_TMDB_TOKEN');
 
-  const query = Object.entries(params)
+  // TMDB v3 keys are 32 characters and belong in the query string; v4 read tokens use Bearer auth.
+  const isV3Key = /^[a-f0-9]{32}$/i.test(token);
+  const queryParams = isV3Key ? { ...params, api_key: token } : params;
+  const query = Object.entries(queryParams)
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
 
   const response = await fetch(`${API}${path}${query ? `?${query}` : ''}`, {
-    headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+    headers: {
+      ...(isV3Key ? {} : { Authorization: `Bearer ${token}` }),
+      accept: 'application/json',
+    },
     signal,
   });
   if (!response.ok) throw new Error(`TMDB ${response.status}`);

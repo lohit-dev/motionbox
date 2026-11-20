@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Linking, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -39,6 +39,7 @@ import { parseId } from '@/lib/api';
 import { heroHeightFor, useClosing, useCloseTitle, useFlying, useOpenTitle } from '@/lib/flight';
 import { genreLine, kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
+import { imageUrl } from '@/lib/tmdb';
 import { useApp, useIsSaved } from '@/store/store';
 import type { Clip, Title } from '@/types';
 
@@ -240,11 +241,20 @@ export default function TitleDetail() {
               <Text className="text-eyebrow font-semibold uppercase text-t2">
                 {kindLine(title)}
               </Text>
-              <Text
-                numberOfLines={2}
-                className="mt-2 text-center text-[40px] font-extrabold leading-[42px] tracking-tighter text-white">
-                {title.name}
-              </Text>
+              {title.logoPath ? (
+                <Image
+                  source={{ uri: imageUrl(title.logoPath, 'w500') ?? undefined }}
+                  resizeMode="contain"
+                  accessibilityLabel={title.name}
+                  style={{ width: '88%', height: 104, marginTop: 8 }}
+                />
+              ) : (
+                <Text
+                  numberOfLines={2}
+                  className="mt-2 text-center text-[40px] font-extrabold leading-[42px] tracking-tighter text-white">
+                  {title.name}
+                </Text>
+              )}
               <View className="mt-3 flex-row items-center gap-3">
                 <View className="flex-row items-center gap-1">
                   <Icon name="star" size={13} />

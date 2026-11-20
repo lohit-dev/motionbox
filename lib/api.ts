@@ -21,7 +21,8 @@ export function loadDetail(id: string): Promise<Title> {
   let hit = details.get(id);
   if (!hit) {
     hit = tmdb<TmdbDetail>(`/${parsed.kind}/${parsed.n}`, {
-      append_to_response: 'credits,videos,reviews,similar,release_dates,content_ratings',
+      append_to_response: 'credits,videos,reviews,similar,release_dates,content_ratings,images',
+      include_image_language: 'en,null',
     })
       .then((raw) => {
         const { title, similar } = mapDetail(raw, parsed.kind);

@@ -74,6 +74,9 @@ export function mapResult(
 
 /** Extra fields on a TMDB movie or tv detail call made with append_to_response. */
 export interface TmdbDetail extends TmdbResult {
+  images?: {
+    logos?: { file_path: string; iso_639_1: string | null }[];
+  };
   genres?: { id: number; name: string }[];
   runtime?: number;
   episode_run_time?: number[];
@@ -180,6 +183,10 @@ export function mapDetail(
         : (raw.created_by?.[0]?.name ?? ''),
     studio: raw.production_companies?.[0]?.name ?? raw.networks?.[0]?.name ?? '',
     tagline: raw.tagline || undefined,
+    logoPath:
+      raw.images?.logos?.find((logo) => logo.iso_639_1 === 'en')?.file_path ??
+      raw.images?.logos?.find((logo) => logo.iso_639_1 === null)?.file_path ??
+      null,
     cast: (raw.credits?.cast ?? []).slice(0, 12).map((c) => ({
       name: c.name,
       role: c.character || 'Cast',

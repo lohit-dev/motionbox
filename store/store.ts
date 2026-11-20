@@ -52,10 +52,10 @@ const toggle = (list: TitleId[], id: TitleId) =>
 export const useApp = create<AppState>()(
   persist(
     (set) => ({
-      saved: ['odyssey', 'empress', 'wolf', 'godzilla', 'silent', 'spider'],
-      watching: { odyssey: 58, empress: 34, wolf: 78 },
-      watched: ['resident', 'spider'],
-      reminders: ['empress', 'wolf'],
+      saved: [],
+      watching: {},
+      watched: [],
+      reminders: [],
       hiddenContinue: [],
       settings: { reminders: true, autoplay: true },
 
@@ -93,8 +93,22 @@ export const useApp = create<AppState>()(
     }),
     {
       name: 'motionbox-v1',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AppState>;
+        const isTmdbId = (id: string) => /^(movie|tv)-\d+$/.test(id);
+        return {
+          ...state,
+          saved: (state.saved ?? []).filter(isTmdbId),
+          watching: Object.fromEntries(
+            Object.entries(state.watching ?? {}).filter(([id]) => isTmdbId(id))
+          ),
+          watched: (state.watched ?? []).filter(isTmdbId),
+          reminders: (state.reminders ?? []).filter(isTmdbId),
+          hiddenContinue: (state.hiddenContinue ?? []).filter(isTmdbId),
+        };
+      },
       // Keep what the person did; transient UI state starts fresh each launch
       partialize: (s) => ({
         saved: s.saved,

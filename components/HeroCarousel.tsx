@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Image, Text, View, useWindowDimensions } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -8,8 +8,10 @@ import { PosterArt } from '@/components/PosterArt';
 import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { Pressable } from '@/components/ui/Pressable';
 import { heroHeightFor } from '@/lib/flight';
 import { ease } from '@/lib/motion';
+import { imageUrl } from '@/lib/tmdb';
 import { genreLine } from '@/lib/format';
 import type { Title } from '@/types';
 
@@ -114,11 +116,24 @@ export function HeroCarousel({
                   <Text className="text-eyebrow font-semibold uppercase text-t2">
                     {item.eyebrow}
                   </Text>
-                  <Text
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${item.title.name}`}
                     onPress={() => onOpen(item.title, art.current[item.title.id] ?? null)}
-                    className="mt-2 text-center text-[44px] font-extrabold leading-[46px] tracking-tighter text-white">
-                    {item.title.name}
-                  </Text>
+                    className="mt-2 h-[100px] w-full items-center justify-center">
+                    {item.title.logoPath ? (
+                      <Image
+                        source={{ uri: imageUrl(item.title.logoPath, 'w500') ?? undefined }}
+                        resizeMode="contain"
+                        style={{ width: '84%', height: 100 }}
+                        accessibilityLabel={item.title.name}
+                      />
+                    ) : (
+                      <Text className="text-center text-[44px] font-extrabold leading-[46px] tracking-tighter text-white">
+                        {item.title.name}
+                      </Text>
+                    )}
+                  </Pressable>
                   <Text className="mt-2 text-[13px] text-t2">{genreLine(item.title, 3)}</Text>
                   <View className="mt-5 flex-row items-center gap-3">
                     <CircleButton
