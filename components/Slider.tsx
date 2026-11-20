@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -37,7 +37,9 @@ export function Slider({ value, onChange, max = 10, step = 0.5 }: SliderProps) {
     });
 
   const left = (value / max) * span;
-  x.value = left;
+  useEffect(() => {
+    x.value = left;
+  }, [left, x]);
   const fill = useAnimatedStyle(() => ({ width: x.value + THUMB / 2 }));
   const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
