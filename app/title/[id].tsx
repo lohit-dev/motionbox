@@ -37,7 +37,15 @@ import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { useTitle, useTitles } from '@/hooks/useTitle';
 import { parseId } from '@/lib/api';
-import { heroHeightFor, useClosing, useCloseTitle, useFlying, useOpenTitle } from '@/lib/flight';
+import {
+  heroHeightFor,
+  useCloseTitle,
+  useClosing,
+  useFlightProgress,
+  useFlying,
+  useHeroReady,
+  useOpenTitle,
+} from '@/lib/flight';
 import { genreLine, kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
 import { getTitle } from '@/lib/titles';
@@ -52,6 +60,8 @@ export default function TitleDetail() {
   const openTitle = useOpenTitle();
   const closeTitle = useCloseTitle();
   const flying = useFlying();
+  const progress = useFlightProgress();
+  const heroReady = useHeroReady();
   const closing = useClosing(id);
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
@@ -94,17 +104,24 @@ export default function TitleDetail() {
   });
 
   // Dark page background fades in just after the artwork starts moving, and out as it flies home
-  const pageBg = useSharedValue(withFlight ? 0 : 1);
+  const pageBg = useSharedValue(1);
   const content = useSharedValue(1);
+  // Tell the flight this hero exists so the flying artwork can hand over to it
   useEffect(() => {
-    if (withFlight) pageBg.value = withDelay(110, withTiming(1, { duration: 300 }));
-  }, [withFlight, pageBg]);
+    const frame = requestAnimationFrame(heroReady);
+    return () => cancelAnimationFrame(frame);
+  }, [heroReady]);
   useEffect(() => {
     if (!closing) return;
     content.value = withTiming(0, { duration: 150, easing: Easing.linear });
     pageBg.value = withDelay(60, withTiming(0, { duration: 320, easing: Easing.linear }));
   }, [closing, content, pageBg]);
-  const pageBgStyle = useAnimatedStyle(() => ({ opacity: pageBg.value }));
+  // Follows the artwork's flight on the UI thread, so a slow mount can't leave a black gap
+  const pageBgStyle = useAnimatedStyle(() => ({
+    opacity:
+      pageBg.value *
+      (withFlight ? interpolate(progress.value, [0.1, 0.7], [0, 1], Extrapolation.CLAMP) : 1),
+  }));
   const contentStyle = useAnimatedStyle(() => ({ opacity: content.value }));
 
   const heroHeight = heroHeightFor(width);
@@ -247,11 +264,12 @@ export default function TitleDetail() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           bounces>
-          <View style={{ width: '100%', height: heroHeight, opacity: flying ? 0 : 1 }}>
+          <View style={{ width: '100%', height: heroHeight }}>
             <Animated.View style={heroStretch}>
               <PosterArt
                 title={title}
                 textless
+                placeholder
                 width={width}
                 height={heroHeight}
                 radius={0}
@@ -261,7 +279,7 @@ export default function TitleDetail() {
             </Animated.View>
             <Fade />
             <Animated.View
-              entering={enter(324, 280)}
+              entering={enter(520, 320)}
               pointerEvents="box-none"
               style={{ position: 'absolute', left: 0, right: 0, bottom: 20 }}>
               <Animated.View

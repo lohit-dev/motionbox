@@ -11,7 +11,9 @@ import {
 } from 'react';
 import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
+  Easing,
   interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -46,8 +48,12 @@ interface FlightContextValue {
    * while the detail screen fades out underneath. Pass the detail scroll offset.
    */
   close: (titleId: string, scrollOffset?: number) => void;
-  /** True while the detail hero should stay hidden under the flying artwork */
+  /** True while artwork is flying in, so the detail screen plays its flight entrance */
   flying: boolean;
+  /** 0 to 1 over the flight, 1 when idle. Drives the detail's dark page background. */
+  progress: SharedValue<number>;
+  /** The detail calls this once its hero is mounted, so the flying artwork can hand over to it */
+  heroReady: () => void;
   /** Id of the title being closed, from close() until its screen is gone */
   closingId: string | null;
 }
@@ -56,12 +62,16 @@ const FlightContext = createContext<FlightContextValue>({
   open: () => {},
   close: () => {},
   flying: false,
+  progress: { value: 1 } as SharedValue<number>,
+  heroReady: () => {},
   closingId: null,
 });
 
 export const useOpenTitle = () => useContext(FlightContext).open;
 export const useCloseTitle = () => useContext(FlightContext).close;
 export const useFlying = () => useContext(FlightContext).flying;
+export const useFlightProgress = () => useContext(FlightContext).progress;
+export const useHeroReady = () => useContext(FlightContext).heroReady;
 /** True only for the detail that is being closed, so a detail stacked underneath stays put */
 export const useClosing = (id: string) => useContext(FlightContext).closingId === id;
 
@@ -70,6 +80,8 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   const { width } = useWindowDimensions();
   const [flight, setFlight] = useState<Flight | null>(null);
   const [landed, setLanded] = useState(false);
+  const [ready, setReady] = useState(false);
+  const progress = useSharedValue(1);
   const [closingId, setClosingId] = useState<string | null>(null);
   /** One entry per open detail screen, so each close flies back to its own card */
   const origins = useRef<(Flight | null)[]>([]);
@@ -89,12 +101,17 @@ export function FlightProvider({ children }: { children: ReactNode }) {
         const next = { title, rect: { x, y, width: w, height: h }, radius };
         origins.current.push(next);
         setLanded(false);
+        setReady(false);
         setFlight(next);
+        progress.value = 0;
+        progress.value = withTiming(1, { duration: DURATION, easing: fly });
         go();
       });
     },
-    [router]
+    [router, progress]
   );
+
+  const heroReady = useCallback(() => setReady(true), []);
 
   const close = useCallback<FlightContextValue['close']>(
     (titleId, scrollOffset = 0) => {
@@ -118,40 +135,83 @@ export function FlightProvider({ children }: { children: ReactNode }) {
     [router, width]
   );
 
-  // The real hero takes over at 60% of the flight, hidden underneath until then.
+  // Flying artwork lands after DURATION. It stays until the detail hero has mounted, and a
+  // timeout keeps it from ever getting stuck on screen.
   useEffect(() => {
     if (!flight || flight.reverse) return;
-    const t = setTimeout(() => setLanded(true), DURATION * 0.6);
-    return () => clearTimeout(t);
+    const land = setTimeout(() => setLanded(true), DURATION);
+    const cap = setTimeout(() => setReady(true), 1800);
+    return () => {
+      clearTimeout(land);
+      clearTimeout(cap);
+    };
   }, [flight]);
 
   const value = useMemo(
-    () => ({ open, close, flying: !!flight && !flight.reverse && !landed, closingId }),
-    [open, close, flight, landed, closingId]
+    () => ({
+      open,
+      close,
+      flying: !!flight && !flight.reverse,
+      progress,
+      heroReady,
+      closingId,
+    }),
+    [open, close, flight, progress, heroReady, closingId]
   );
 
   return (
     <FlightContext.Provider value={value}>
       {children}
-      {flight ? <Overlay flight={flight} onDone={() => setFlight(null)} /> : null}
+      {flight ? (
+        <Overlay
+          flight={flight}
+          progress={progress}
+          handOver={landed && ready}
+          onDone={() => setFlight(null)}
+        />
+      ) : null}
     </FlightContext.Provider>
   );
 }
 
-function Overlay({ flight, onDone }: { flight: Flight; onDone: () => void }) {
+function Overlay({
+  flight,
+  progress,
+  handOver,
+  onDone,
+}: {
+  flight: Flight;
+  progress: SharedValue<number>;
+  /** Forward flight only: the artwork has landed and the detail hero is there to take over */
+  handOver: boolean;
+  onDone: () => void;
+}) {
   const { width } = useWindowDimensions();
   const target = { x: 0, y: flight.offsetY ?? 0, width, height: heroHeightFor(width), radius: 0 };
   const reverse = !!flight.reverse;
-  const p = useSharedValue(reverse ? 1 : 0);
-  const uri = imageUrl(flight.title.posterPath, 'w1280');
+  const local = useSharedValue(reverse ? 1 : 0);
+  const p = reverse ? local : progress;
+  const fade = useSharedValue(0);
+  // w500 is what the card already showed, so it is in memory and paints on the first frame.
+  // The sharp w1280 version loads over it.
+  const small = imageUrl(flight.title.posterPath, 'w500');
+  const large = imageUrl(flight.title.posterPath, 'w1280');
   const done = useRef(onDone);
   done.current = onDone;
 
   useEffect(() => {
-    p.value = withTiming(reverse ? 0 : 1, { duration: DURATION, easing: fly });
+    if (!reverse) return;
+    local.value = withTiming(0, { duration: DURATION, easing: fly });
     const t = setTimeout(() => done.current(), DURATION + 30);
     return () => clearTimeout(t);
-  }, [p, reverse]);
+  }, [local, reverse]);
+
+  useEffect(() => {
+    if (reverse || !handOver) return;
+    fade.value = withTiming(1, { duration: 180, easing: Easing.linear });
+    const t = setTimeout(() => done.current(), 200);
+    return () => clearTimeout(t);
+  }, [fade, handOver, reverse]);
 
   const box = useAnimatedStyle(() => ({
     left: interpolate(p.value, [0, 1], [flight.rect.x, target.x]),
@@ -159,9 +219,7 @@ function Overlay({ flight, onDone }: { flight: Flight; onDone: () => void }) {
     width: interpolate(p.value, [0, 1], [flight.rect.width, target.width]),
     height: interpolate(p.value, [0, 1], [flight.rect.height, target.height]),
     borderRadius: interpolate(p.value, [0, 1], [flight.radius, target.radius]),
-    opacity: reverse
-      ? interpolate(p.value, [0, 0.26, 1], [0, 1, 1], 'clamp')
-      : interpolate(p.value, [0, 0.74, 1], [1, 1, 0], 'clamp'),
+    opacity: reverse ? interpolate(p.value, [0, 0.26, 1], [0, 1, 1], 'clamp') : 1 - fade.value,
   }));
   const gradient = useAnimatedStyle(() => ({ opacity: p.value }));
 
@@ -169,11 +227,14 @@ function Overlay({ flight, onDone }: { flight: Flight; onDone: () => void }) {
     <Animated.View
       pointerEvents="none"
       style={[{ position: 'absolute', overflow: 'hidden', backgroundColor: colors.s1 }, box]}>
-      {uri ? (
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      {small ? (
+        <Image source={{ uri: small }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.s2 }]} />
       )}
+      {large ? (
+        <Image source={{ uri: large }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      ) : null}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, gradient]}>
         <Fade />
       </Animated.View>

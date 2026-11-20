@@ -17,6 +17,8 @@ interface PosterArtProps {
   size?: PosterSize;
   /** Hairline border, off for full-bleed heroes */
   bordered?: boolean;
+  /** Paint the small poster first (already cached from the card) while the large one loads */
+  placeholder?: boolean;
 }
 
 function hash(text: string) {
@@ -104,14 +106,21 @@ function PosterArtBase({
   bordered = true,
   textless = false,
   showName = true,
+  placeholder = false,
 }: PosterArtProps) {
   const uri = imageUrl((textless && title.heroPath) || title.posterPath, size);
+  const base = imageUrl(title.posterPath, 'w500');
   return (
     <View
       className={`overflow-hidden bg-s1 ${bordered ? 'border border-white/10' : ''}`}
       style={{ width, height, borderRadius: radius }}>
       {uri ? (
-        <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        <>
+          {placeholder && base && base !== uri ? (
+            <Image source={{ uri: base }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : null}
+          <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        </>
       ) : (
         <GeneratedArt name={title.name} width={width} height={height} showName={showName} />
       )}
