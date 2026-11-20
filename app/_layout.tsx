@@ -50,11 +50,9 @@ export default function Layout() {
                   gestureEnabled: false,
                 }}
               />
-              <Stack.Screen name="player/[id]" options={{ animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="trailers" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="person/[name]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </FlightProvider>
           <LaunchSplash />
