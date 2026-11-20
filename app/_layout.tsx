@@ -23,6 +23,16 @@ export default function Layout() {
                 contentStyle: { backgroundColor: colors.ink },
                 animation: 'fade',
               }}>
+              {/* Transparent and instant: the card's artwork flies in over Home instead of Home fading out first */}
+              <Stack.Screen
+                name="title/[id]"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'none',
+                  contentStyle: { backgroundColor: 'transparent' },
+                  gestureEnabled: false,
+                }}
+              />
               <Stack.Screen name="player/[id]" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="trailers" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />

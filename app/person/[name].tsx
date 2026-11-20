@@ -20,7 +20,8 @@ export default function Person() {
   const openTitle = useOpenTitle();
   const { top } = useSafeAreaInsets();
   const [following, setFollowing] = useState(false);
-  const person = getPerson(name ?? '');
+  const person =
+    getPerson(name ?? '') ?? (name ? { name, initials: '', line: 'Actor', bio: '' } : undefined);
   const known = titles.filter((t) => t.cast.some((c) => c.name === name));
 
   return (
@@ -46,7 +47,9 @@ export default function Person() {
                 onPress={() => setFollowing((f) => !f)}
               />
             </View>
-            <Text className="mt-6 text-[15px] leading-6 text-t2">{person.bio}</Text>
+            {person.bio ? (
+              <Text className="mt-6 text-[15px] leading-6 text-t2">{person.bio}</Text>
+            ) : null}
           </Reveal>
         ) : (
           <Text className="mt-16 text-center text-xl font-bold text-white">Person not found</Text>
