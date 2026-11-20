@@ -1,4 +1,4 @@
-import type { Title } from '@/types';
+import type { Episode, Person, Title } from '@/types';
 
 const GENRES: Record<number, string> = {
   28: 'Action',
@@ -72,21 +72,60 @@ export function mapResult(
   };
 }
 
+interface RawEpisodeAir {
+  air_date: string | null;
+  episode_number: number;
+  season_number: number;
+  name: string;
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  hi: 'Hindi',
+  te: 'Telugu',
+  ta: 'Tamil',
+  ml: 'Malayalam',
+  kn: 'Kannada',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  tr: 'Turkish',
+  th: 'Thai',
+  ar: 'Arabic',
+};
+
+const episodeAir = (e?: RawEpisodeAir | null) =>
+  e?.air_date
+    ? { season: e.season_number, episode: e.episode_number, name: e.name, airDate: e.air_date }
+    : undefined;
+
 /** Extra fields on a TMDB movie or tv detail call made with append_to_response. */
 export interface TmdbDetail extends TmdbResult {
   images?: {
     logos?: { file_path: string; iso_639_1: string | null }[];
   };
   genres?: { id: number; name: string }[];
+  original_language?: string;
+  next_episode_to_air?: RawEpisodeAir | null;
+  last_episode_to_air?: RawEpisodeAir | null;
   runtime?: number;
   episode_run_time?: number[];
   number_of_seasons?: number;
+  seasons?: { season_number: number; name: string; episode_count: number }[];
   tagline?: string;
   production_companies?: { name: string }[];
   networks?: { name: string }[];
   created_by?: { name: string }[];
   credits?: {
-    cast: { name: string; character: string; profile_path: string | null }[];
+    cast: { id: number; name: string; character: string; profile_path: string | null }[];
     crew: { name: string; job: string }[];
   };
   videos?: {
@@ -183,11 +222,22 @@ export function mapDetail(
         : (raw.created_by?.[0]?.name ?? ''),
     studio: raw.production_companies?.[0]?.name ?? raw.networks?.[0]?.name ?? '',
     tagline: raw.tagline || undefined,
+    releaseDate: raw.release_date ?? raw.first_air_date ?? undefined,
+    language: raw.original_language
+      ? (LANGUAGE_NAMES[raw.original_language] ?? raw.original_language.toUpperCase())
+      : undefined,
+    seasonList: (raw.seasons ?? [])
+      .filter((x) => x.season_number > 0 && x.episode_count > 0)
+      .map((x) => ({ number: x.season_number, name: x.name, episodeCount: x.episode_count })),
+    nextEpisode: episodeAir(raw.next_episode_to_air),
+    lastEpisode: episodeAir(raw.last_episode_to_air),
     logoPath:
       raw.images?.logos?.find((logo) => logo.iso_639_1 === 'en')?.file_path ??
       raw.images?.logos?.find((logo) => logo.iso_639_1 === null)?.file_path ??
+      raw.images?.logos?.[0]?.file_path ??
       null,
-    cast: (raw.credits?.cast ?? []).slice(0, 12).map((c) => ({
+    cast: (raw.credits?.cast ?? []).slice(0, 14).map((c) => ({
+      id: c.id,
       name: c.name,
       role: c.character || 'Cast',
       photoPath: c.profile_path,
@@ -199,3 +249,66 @@ export function mapDetail(
   };
   return { title, similar };
 }
+
+/** TMDB person detail with combined credits. */
+export interface TmdbPerson {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  biography?: string;
+  birthday?: string | null;
+  place_of_birth?: string | null;
+  known_for_department?: string;
+  combined_credits?: { cast: (TmdbResult & { popularity?: number })[] };
+}
+
+export function mapPerson(raw: TmdbPerson): { person: Person; known: Title[] } {
+  const seen = new Set<string>();
+  const known = (raw.combined_credits?.cast ?? [])
+    .filter((c) => c.poster_path && (c.media_type === 'movie' || c.media_type === 'tv'))
+    .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+    .map((c, i) => mapResult(c, i))
+    .filter((t): t is Title => {
+      if (!t || seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    })
+    .slice(0, 24);
+  const born = [formatDate(raw.birthday ?? undefined), raw.place_of_birth]
+    .filter(Boolean)
+    .join(' · ');
+  return {
+    person: {
+      id: raw.id,
+      name: raw.name,
+      photoPath: raw.profile_path,
+      department: raw.known_for_department ?? '',
+      born,
+      bio: raw.biography?.trim() ?? '',
+      knownFor: known.map((t) => t.id),
+    },
+    known,
+  };
+}
+
+/** One TMDB season with its episodes. */
+export interface TmdbSeason {
+  episodes: {
+    episode_number: number;
+    name: string;
+    overview: string;
+    runtime: number | null;
+    still_path: string | null;
+    air_date: string | null;
+  }[];
+}
+
+export const mapEpisodes = (raw: TmdbSeason): Episode[] =>
+  raw.episodes.map((e) => ({
+    number: e.episode_number,
+    name: e.name,
+    overview: e.overview,
+    runtime: e.runtime ?? 0,
+    stillPath: e.still_path,
+    airDate: e.air_date ?? '',
+  }));

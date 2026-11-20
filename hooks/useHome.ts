@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { titles as seed } from '@/data/titles';
 import { hasTmdb, loadDetail, loadHome } from '@/lib/api';
 import type { Title } from '@/types';
 
@@ -10,57 +9,50 @@ interface Home {
   series: Title[];
   loading: boolean;
   failed: boolean;
-  source: 'tmdb' | 'seed';
+  /** False when no TMDB key is configured */
+  configured: boolean;
 }
 
-const SEED: Home = {
-  trending: seed,
-  upcoming: seed.filter((t) => t.kind === 'movie'),
-  series: seed.filter((t) => t.kind === 'series'),
-  loading: false,
-  failed: false,
-  source: 'seed',
-};
+const EMPTY = { trending: [], upcoming: [], series: [] };
 
-/** Home feed from TMDB: trending this week, upcoming movies and popular series. */
+/** Home feed: trending this week, upcoming movies and popular series. */
 export function useHome(reloadKey = 0): Home {
-  const [state, setState] = useState<Home>(() => (hasTmdb() ? { ...SEED, loading: true } : SEED));
+  const configured = hasTmdb();
+  const [state, setState] = useState<Home>({
+    ...EMPTY,
+    loading: configured,
+    failed: false,
+    configured,
+  });
 
   useEffect(() => {
-    if (!hasTmdb()) return;
+    if (!configured) return;
     let live = true;
     setState((s) => ({ ...s, loading: true, failed: false }));
-    loadHome()
+    loadHome(reloadKey > 0)
       .then((data) => {
         if (!live) return;
-        setState({ ...data, loading: false, failed: false, source: 'tmdb' });
-        void Promise.all(data.trending.slice(0, 4).map((title) => loadDetail(title.id).catch(() => null)))
-          .then((details) => {
+        setState({ ...data, loading: false, failed: false, configured });
+        // The hero shows title logos, which only come with the full detail
+        Promise.all(data.trending.slice(0, 5).map((t) => loadDetail(t.id).catch(() => null))).then(
+          (full) => {
             if (!live) return;
             setState((current) => ({
               ...current,
               trending: current.trending.map(
-                (title) => details.find((detail) => detail?.id === title.id) ?? title
+                (t) => full.find((detail) => detail?.id === t.id) ?? t
               ),
             }));
-          });
+          }
+        );
       })
       .catch(() => {
-        if (live) {
-          setState({
-            trending: [],
-            upcoming: [],
-            series: [],
-            loading: false,
-            failed: true,
-            source: 'tmdb',
-          });
-        }
+        if (live) setState({ ...EMPTY, loading: false, failed: true, configured });
       });
     return () => {
       live = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, configured]);
 
   return state;
 }

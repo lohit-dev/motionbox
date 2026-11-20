@@ -3,27 +3,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { clearApiCache } from '@/lib/api';
+import { setTmdbLanguage } from '@/lib/tmdb';
 import type { AiringSegment, LibraryTab, TitleId } from '@/types';
 
-interface Settings {
-  reminders: boolean;
-  autoplay: boolean;
-}
+/** Content languages offered in Profile. The code goes to TMDB. */
+export const LANGUAGES = [
+  { label: 'English', code: 'en-US' },
+  { label: 'Hindi', code: 'hi-IN' },
+  { label: 'Telugu', code: 'te-IN' },
+] as const;
 
 export interface AppState {
   saved: TitleId[];
-  /** Title id -> percent watched (0-100) */
-  watching: Record<TitleId, number>;
+  watching: TitleId[];
   watched: TitleId[];
   reminders: TitleId[];
-  hiddenContinue: TitleId[];
-  settings: Settings;
+  recentSearches: string[];
 
+  /** Index into LANGUAGES */
   language: number;
   updatesRead: boolean;
   onboarded: boolean;
-  /** Demo switch for the offline state */
-  offline: boolean;
 
   libraryTab: LibraryTab;
   /** 0 = Sunday */
@@ -32,15 +33,15 @@ export interface AppState {
 
   toggleSave: (id: TitleId) => void;
   toggleReminder: (id: TitleId) => void;
-  setProgress: (id: TitleId, percent: number) => void;
+  toggleWatching: (id: TitleId) => void;
   markWatched: (id: TitleId) => void;
-  hideContinue: (id: TitleId) => void;
+  unmarkWatched: (id: TitleId) => void;
   clearHistory: () => void;
-  setSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  addRecent: (text: string) => void;
+  clearRecents: () => void;
   setLanguage: (index: number) => void;
   markUpdatesRead: () => void;
   finishOnboarding: () => void;
-  setOffline: (offline: boolean) => void;
   setLibraryTab: (tab: LibraryTab) => void;
   setAiringDay: (day: number) => void;
   setAiringSegment: (segment: AiringSegment) => void;
@@ -49,65 +50,83 @@ export interface AppState {
 const toggle = (list: TitleId[], id: TitleId) =>
   list.includes(id) ? list.filter((x) => x !== id) : [id, ...list];
 
+const isTmdbId = (id: string) => /^(movie|tv)-\d+$/.test(id);
+
 export const useApp = create<AppState>()(
   persist(
     (set) => ({
       saved: [],
-      watching: {},
+      watching: [],
       watched: [],
       reminders: [],
-      hiddenContinue: [],
-      settings: { reminders: true, autoplay: true },
+      recentSearches: [],
 
       language: 0,
       updatesRead: false,
       onboarded: false,
-      offline: false,
 
       libraryTab: 'saved',
       airingDay: new Date().getDay(),
       airingSegment: 'all',
 
-      toggleSave: (id) => set((s) => ({ saved: toggle(s.saved, id) })),
+      toggleSave: (id) => set((s) => ({ saved: toggle(s.saved, id), updatesRead: false })),
       toggleReminder: (id) => set((s) => ({ reminders: toggle(s.reminders, id) })),
-      setProgress: (id, percent) =>
+      toggleWatching: (id) =>
         set((s) => ({
-          watching: { ...s.watching, [id]: percent },
-          hiddenContinue: s.hiddenContinue.filter((x) => x !== id),
+          watching: toggle(s.watching, id),
+          watched: s.watched.filter((x) => x !== id),
         })),
       markWatched: (id) =>
+        set((s) => ({
+          watching: s.watching.filter((x) => x !== id),
+          watched: s.watched.includes(id) ? s.watched : [id, ...s.watched],
+        })),
+      unmarkWatched: (id) => set((s) => ({ watched: s.watched.filter((x) => x !== id) })),
+      clearHistory: () => set({ watching: [], watched: [] }),
+      addRecent: (text) =>
         set((s) => {
-          const { [id]: _removed, ...watching } = s.watching;
-          return { watching, watched: s.watched.includes(id) ? s.watched : [id, ...s.watched] };
+          const value = text.trim();
+          if (!value) return s;
+          return {
+            recentSearches: [value, ...s.recentSearches.filter((x) => x !== value)].slice(0, 6),
+          };
         }),
-      hideContinue: (id) => set((s) => ({ hiddenContinue: [id, ...s.hiddenContinue] })),
-      clearHistory: () => set({ watching: {}, watched: [], hiddenContinue: [] }),
-      setSetting: (key, value) => set((s) => ({ settings: { ...s.settings, [key]: value } })),
-      setLanguage: (language) => set({ language }),
+      clearRecents: () => set({ recentSearches: [] }),
+      setLanguage: (language) => {
+        setTmdbLanguage(LANGUAGES[language]?.code ?? 'en-US');
+        clearApiCache();
+        set({ language });
+      },
       markUpdatesRead: () => set({ updatesRead: true }),
       finishOnboarding: () => set({ onboarded: true }),
-      setOffline: (offline) => set({ offline }),
       setLibraryTab: (libraryTab) => set({ libraryTab }),
       setAiringDay: (airingDay) => set({ airingDay }),
       setAiringSegment: (airingSegment) => set({ airingSegment }),
     }),
     {
       name: 'motionbox-v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => AsyncStorage),
-      migrate: (persistedState) => {
-        const state = persistedState as Partial<AppState>;
-        const isTmdbId = (id: string) => /^(movie|tv)-\d+$/.test(id);
+      migrate: (persisted) => {
+        const s = persisted as Record<string, unknown>;
+        const ids = (value: unknown) =>
+          (Array.isArray(value) ? value : Object.keys((value as object) ?? {})).filter(
+            (id): id is string => typeof id === 'string' && isTmdbId(id)
+          );
         return {
-          ...state,
-          saved: (state.saved ?? []).filter(isTmdbId),
-          watching: Object.fromEntries(
-            Object.entries(state.watching ?? {}).filter(([id]) => isTmdbId(id))
-          ),
-          watched: (state.watched ?? []).filter(isTmdbId),
-          reminders: (state.reminders ?? []).filter(isTmdbId),
-          hiddenContinue: (state.hiddenContinue ?? []).filter(isTmdbId),
-        };
+          saved: ids(s.saved),
+          watching: ids(s.watching),
+          watched: ids(s.watched),
+          reminders: ids(s.reminders),
+          recentSearches: [],
+          language: typeof s.language === 'number' ? s.language : 0,
+          updatesRead: !!s.updatesRead,
+          onboarded: !!s.onboarded,
+          libraryTab: (s.libraryTab as LibraryTab) ?? 'saved',
+        } as AppState;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) setTmdbLanguage(LANGUAGES[state.language]?.code ?? 'en-US');
       },
       // Keep what the person did; transient UI state starts fresh each launch
       partialize: (s) => ({
@@ -115,8 +134,7 @@ export const useApp = create<AppState>()(
         watching: s.watching,
         watched: s.watched,
         reminders: s.reminders,
-        hiddenContinue: s.hiddenContinue,
-        settings: s.settings,
+        recentSearches: s.recentSearches,
         language: s.language,
         updatesRead: s.updatesRead,
         onboarded: s.onboarded,

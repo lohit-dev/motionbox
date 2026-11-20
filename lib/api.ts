@@ -1,20 +1,50 @@
-import { registerTitles } from '@/data/titles';
 import { endpoints, tmdb } from '@/lib/tmdb';
-import { mapDetail, mapResult, type TmdbDetail, type TmdbResult } from '@/lib/tmdb-map';
-import type { Title } from '@/types';
+import {
+  mapDetail,
+  mapEpisodes,
+  mapPerson,
+  mapResult,
+  type TmdbDetail,
+  type TmdbPerson,
+  type TmdbResult,
+  type TmdbSeason,
+} from '@/lib/tmdb-map';
+import { registerTitles } from '@/lib/titles';
+import type { Episode, Filters, Person, Title } from '@/types';
 
-/** True when a TMDB token is configured. Without one the app runs on bundled seed data. */
+/** True when a TMDB key or token is configured. */
 export const hasTmdb = () => !!process.env.EXPO_PUBLIC_TMDB_TOKEN;
 
-/** "movie-603" -> { kind: "movie", n: 603 }. Seed titles such as "godzilla" return null. */
+/** "movie-603" -> { kind: "movie", n: 603 } */
 export function parseId(id: string) {
   const m = /^(movie|tv)-(\d+)$/.exec(id);
   return m ? { kind: m[1] as 'movie' | 'tv', n: Number(m[2]) } : null;
 }
 
-const details = new Map<string, Promise<Title>>();
+type Page<T> = { results: T[]; page: number; total_pages: number; total_results: number };
 
-/** Full detail for one title: cast, trailers, reviews, certification and similar titles. */
+const details = new Map<string, Promise<Title>>();
+const seasons = new Map<string, Promise<Episode[]>>();
+const people = new Map<number, Promise<{ person: Person; known: Title[] }>>();
+let home: ReturnType<typeof fetchHome> | null = null;
+
+/** Forget everything cached, for example after the content language changes. */
+export function clearApiCache() {
+  details.clear();
+  seasons.clear();
+  people.clear();
+  home = null;
+}
+
+const list = (results: TmdbResult[], kind: 'movie' | 'tv') => {
+  const mapped = results
+    .map((r, i) => mapResult(r, i, kind))
+    .filter((t): t is Title => !!t && !!t.posterPath);
+  registerTitles(mapped);
+  return mapped;
+};
+
+/** Full detail for one title: cast, trailers, reviews, logo, certification and similar titles. */
 export function loadDetail(id: string): Promise<Title> {
   const parsed = parseId(id);
   if (!parsed) return Promise.reject(new Error('Not a TMDB id'));
@@ -38,19 +68,47 @@ export function loadDetail(id: string): Promise<Title> {
   return hit;
 }
 
-const list = (results: TmdbResult[], kind: 'movie' | 'tv') => {
-  const mapped = results
-    .map((r, i) => mapResult(r, i, kind))
-    .filter((t): t is Title => !!t && !!t.posterPath);
-  registerTitles(mapped);
-  return mapped;
-};
+/** Episodes of one season. */
+export function loadSeason(id: string, season: number): Promise<Episode[]> {
+  const parsed = parseId(id);
+  if (!parsed) return Promise.reject(new Error('Not a series'));
+  const key = `${id}:${season}`;
+  let hit = seasons.get(key);
+  if (!hit) {
+    hit = tmdb<TmdbSeason>(endpoints.season(parsed.n, season))
+      .then(mapEpisodes)
+      .catch((error: unknown) => {
+        seasons.delete(key);
+        throw error;
+      });
+    seasons.set(key, hit);
+  }
+  return hit;
+}
 
-export async function loadHome() {
+export function loadPerson(id: number) {
+  let hit = people.get(id);
+  if (!hit) {
+    hit = tmdb<TmdbPerson>(endpoints.person(id), { append_to_response: 'combined_credits' })
+      .then((raw) => {
+        const result = mapPerson(raw);
+        registerTitles(result.known);
+        return result;
+      })
+      .catch((error: unknown) => {
+        people.delete(id);
+        throw error;
+      });
+    people.set(id, hit);
+  }
+  return hit;
+}
+
+async function fetchHome() {
   const [trending, upcoming, series] = await Promise.all([
-    tmdb<{ results: TmdbResult[] }>(endpoints.trendingWeek),
-    tmdb<{ results: TmdbResult[] }>(endpoints.upcomingMovies),
-    tmdb<{ results: TmdbResult[] }>(endpoints.popularSeries),
+    tmdb<Page<TmdbResult>>(endpoints.trendingWeek),
+    tmdb<Page<TmdbResult>>(endpoints.upcomingMovies),
+    tmdb<Page<TmdbResult>>(endpoints.popularSeries),
   ]);
   return {
     trending: list(trending.results, 'movie'),
@@ -59,60 +117,143 @@ export async function loadHome() {
   };
 }
 
-export async function searchTitles(query: string, signal?: AbortSignal) {
-  const { results } = await tmdb<{ results: TmdbResult[] }>(
-    endpoints.search,
-    { query, include_adult: false },
-    signal
-  );
-  return list(
-    results.filter((r) => r.media_type !== 'person'),
-    'movie'
-  );
+/** Trending, upcoming and popular series. One shared request, so Home and Search never double up. */
+export function loadHome(force = false) {
+  if (force || !home) {
+    const request = fetchHome();
+    home = request;
+    request.catch(() => {
+      if (home === request) home = null;
+    });
+  }
+  return home;
 }
 
-/** TMDB genre ids per app genre, [movie, tv]. */
-const GENRE_IDS: Record<string, [number, number | null]> = {
-  Action: [28, 10759],
-  Adventure: [12, 10759],
-  Drama: [18, 18],
-  Horror: [27, null],
-  Mystery: [9648, 9648],
-  'Sci-Fi': [878, 10765],
-  Thriller: [53, null],
-  History: [36, null],
+export interface SearchPage {
+  titles: Title[];
+  people: { id: number; name: string; photoPath: string | null; department: string }[];
+  total: number;
+  hasMore: boolean;
+}
+
+const GENRE_IDS: Record<string, { movie: number | null; tv: number | null }> = {
+  Action: { movie: 28, tv: 10759 },
+  Adventure: { movie: 12, tv: 10759 },
+  Animation: { movie: 16, tv: 16 },
+  Comedy: { movie: 35, tv: 35 },
+  Crime: { movie: 80, tv: 80 },
+  Drama: { movie: 18, tv: 18 },
+  Family: { movie: 10751, tv: 10751 },
+  Fantasy: { movie: 14, tv: 10765 },
+  History: { movie: 36, tv: null },
+  Horror: { movie: 27, tv: null },
+  Mystery: { movie: 9648, tv: 9648 },
+  Romance: { movie: 10749, tv: null },
+  'Sci-Fi': { movie: 878, tv: 10765 },
+  Thriller: { movie: 53, tv: null },
 };
 
-export async function discoverGenre(genre: string, signal?: AbortSignal) {
-  const ids = GENRE_IDS[genre];
-  if (!ids) return [];
+/** Genres offered in the filter sheet. */
+export const GENRES = Object.keys(GENRE_IDS);
+
+const SORT_MOVIE = {
+  popular: 'popularity.desc',
+  top: 'vote_average.desc',
+  new: 'primary_release_date.desc',
+} as const;
+const SORT_TV = {
+  popular: 'popularity.desc',
+  top: 'vote_average.desc',
+  new: 'first_air_date.desc',
+} as const;
+
+const applySort = (items: Title[], sort: Filters['sort']) => {
+  if (sort === 'top') return [...items].sort((a, b) => b.score - a.score);
+  if (sort === 'new') return [...items].sort((a, b) => b.year - a.year);
+  return items;
+};
+
+const passes = (t: Title, f: Filters) =>
+  (f.kind === 'all' || t.kind === f.kind) &&
+  t.score >= f.minScore &&
+  (!f.genres.length || f.genres.some((g) => t.genres.includes(g)));
+
+/** One page of results: text search when there is a query, otherwise a filtered discover. */
+export async function searchPage(
+  query: string,
+  filters: Filters,
+  page: number,
+  signal?: AbortSignal
+): Promise<SearchPage> {
+  if (query.trim().length >= 2) {
+    const res = await tmdb<
+      Page<TmdbResult & { known_for_department?: string; profile_path?: string | null }>
+    >(endpoints.search, { query: query.trim(), include_adult: false, page }, signal);
+    const media = res.results.filter((r) => r.media_type !== 'person');
+    const titles = applySort(
+      list(media, 'movie').filter((t) => passes(t, filters)),
+      filters.sort
+    );
+    const found = res.results
+      .filter((r) => r.media_type === 'person')
+      .map((r) => ({
+        id: r.id,
+        name: r.name ?? '',
+        photoPath: r.profile_path ?? null,
+        department: r.known_for_department ?? '',
+      }));
+    return { titles, people: found, total: res.total_results, hasMore: page < res.total_pages };
+  }
+
+  const wantMovies = filters.kind !== 'series';
+  const wantTv = filters.kind !== 'movie';
+  const ids = (key: 'movie' | 'tv') =>
+    [
+      ...new Set(filters.genres.map((g) => GENRE_IDS[g]?.[key]).filter((n): n is number => !!n)),
+    ].join('|');
+  const common = (key: 'movie' | 'tv') => ({
+    page,
+    include_adult: false,
+    with_genres: ids(key) || undefined,
+    'vote_average.gte': filters.minScore || undefined,
+    'vote_count.gte': filters.sort === 'top' ? 300 : 20,
+  });
   const [movies, shows] = await Promise.all([
-    tmdb<{ results: TmdbResult[] }>(
-      '/discover/movie',
-      { with_genres: ids[0], sort_by: 'popularity.desc', include_adult: false },
-      signal
-    ),
-    ids[1]
-      ? tmdb<{ results: TmdbResult[] }>(
-          '/discover/tv',
-          { with_genres: ids[1], sort_by: 'popularity.desc' },
+    wantMovies && !(filters.genres.length && !ids('movie'))
+      ? tmdb<Page<TmdbResult>>(
+          '/discover/movie',
+          { ...common('movie'), sort_by: SORT_MOVIE[filters.sort] },
           signal
         )
-      : Promise.resolve({ results: [] as TmdbResult[] }),
+      : null,
+    wantTv && !(filters.genres.length && !ids('tv'))
+      ? tmdb<Page<TmdbResult>>(
+          '/discover/tv',
+          { ...common('tv'), sort_by: SORT_TV[filters.sort] },
+          signal
+        )
+      : null,
   ]);
-  return list(movies.results, 'movie')
-    .concat(list(shows.results, 'tv'))
-    .sort((a, b) => a.popularity - b.popularity);
+  const titles = applySort(
+    list(movies?.results ?? [], 'movie').concat(list(shows?.results ?? [], 'tv')),
+    filters.sort
+  );
+  return {
+    titles,
+    people: [],
+    total: (movies?.total_results ?? 0) + (shows?.total_results ?? 0),
+    hasMore: (!!movies && page < movies.total_pages) || (!!shows && page < shows.total_pages),
+  };
 }
 
 const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-/** Series airing on each given day. TMDB has no air times, so only the day is known. */
+/** Series airing on each given day. TMDB has no air times, only the day. */
 export async function loadAiringWeek(days: Date[]) {
   const perDay = await Promise.all(
     days.map((d) =>
-      tmdb<{ results: TmdbResult[] }>('/discover/tv', {
+      tmdb<Page<TmdbResult>>('/discover/tv', {
         'air_date.gte': isoDay(d),
         'air_date.lte': isoDay(d),
         sort_by: 'popularity.desc',
@@ -120,5 +261,5 @@ export async function loadAiringWeek(days: Date[]) {
       })
     )
   );
-  return perDay.map((r) => list(r.results.slice(0, 8), 'tv'));
+  return perDay.map((r) => list(r.results.slice(0, 10), 'tv'));
 }
