@@ -80,9 +80,9 @@ export default function TitleDetail() {
   const [expanded, setExpanded] = useState(false);
 
   // Was this screen opened by a card flying into it? Decides which entrance to play.
-  const withFlight = useRef(flying).current;
+  const [withFlight] = useState(flying);
   const [ready, setReady] = useState(!withFlight);
-  // Loading YouTube's player script takes a second, so start while the person reads the page
+  // Resolve YouTube's player script while the person reads the title page.
   useEffect(() => {
     if (title?.clips?.length) warmUpYouTube();
   }, [title?.clips?.length]);

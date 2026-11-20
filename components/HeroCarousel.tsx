@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, View, useWindowDimensions, type ViewInstance } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -31,7 +31,7 @@ interface HeroCarouselProps {
   slides: HeroSlide[];
   saved: (id: string) => boolean;
   onToggleSave: (id: string) => void;
-  onOpen: (title: Title, art: View | null) => void;
+  onOpen: (title: Title, art: ViewInstance | null) => void;
   onTrailer: (title: Title) => void;
   /** Milliseconds between automatic slides. 0 turns auto-rotate off. */
   interval?: number;
@@ -151,7 +151,7 @@ interface SlideProps {
   on: boolean;
   saved: boolean;
   onToggleSave: (id: string) => void;
-  onOpen: (art: View | null) => void;
+  onOpen: (art: ViewInstance | null) => void;
   onTrailer: () => void;
 }
 
@@ -173,7 +173,7 @@ const Slide = memo(function Slide({
   onOpen,
   onTrailer,
 }: SlideProps) {
-  const art = useRef<View>(null);
+  const art = useRef<ViewInstance>(null);
   const { title } = item;
 
   // Artwork drifts slower than the page and the text fades out before it leaves, which reads as

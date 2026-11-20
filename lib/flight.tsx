@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, View, useWindowDimensions, type ViewInstance } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -42,7 +42,7 @@ interface Flight {
 
 interface FlightContextValue {
   /** Opens a title. Pass the card's view so the artwork can fly from it. */
-  open: (title: Title, from?: View | null, radius?: number) => void;
+  open: (title: Title, from?: ViewInstance | null, radius?: number) => void;
   /**
    * Goes back from a title. Flies the hero into the card it came from when it can,
    * while the detail screen fades out underneath. Pass the detail scroll offset.
@@ -197,7 +197,10 @@ function Overlay({
   const small = imageUrl(flight.title.posterPath, 'w500');
   const large = imageUrl(flight.title.posterPath, 'w1280');
   const done = useRef(onDone);
-  done.current = onDone;
+
+  useEffect(() => {
+    done.current = onDone;
+  }, [onDone]);
 
   useEffect(() => {
     if (!reverse) return;

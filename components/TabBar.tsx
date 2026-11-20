@@ -116,8 +116,7 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
                 target: route.key,
                 canPreventDefault: true,
               });
-              if (!focused && !event.defaultPrevented)
-                navigateToTab(route.key);
+              if (!focused && !event.defaultPrevented) navigateToTab(route.key);
             }}
           />
         );

@@ -65,10 +65,7 @@ export function FilterSheet({
           contentContainerStyle={{ paddingBottom: 110 }}>
           <View className="flex-row items-center justify-between pt-1">
             <Label>Genre</Label>
-            <Pressable
-              accessibilityRole="button"
-              scale={0.94}
-              onPress={() => onChange(NO_FILTERS)}>
+            <Pressable accessibilityRole="button" scale={0.94} onPress={() => onChange(NO_FILTERS)}>
               <Text className="text-[14px] font-semibold text-t2">Reset</Text>
             </Pressable>
           </View>
@@ -87,7 +84,10 @@ export function FilterSheet({
             <Label>Minimum score</Label>
             <Text className="text-[16px] font-bold text-white">{filters.minScore.toFixed(1)}</Text>
           </View>
-          <Slider value={filters.minScore} onChange={(minScore) => onChange({ ...filters, minScore })} />
+          <Slider
+            value={filters.minScore}
+            onChange={(minScore) => onChange({ ...filters, minScore })}
+          />
           <View className="flex-row justify-between">
             <Text className="text-[12px] text-t3">0</Text>
             <Text className="text-[12px] text-t3">10</Text>

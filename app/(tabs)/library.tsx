@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollViewInstance,
 } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
@@ -22,7 +23,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { useTitles } from '@/hooks/useTitle';
 import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
-import type { LibraryTab, Title } from '@/types';
+import type { LibraryTab } from '@/types';
 
 const TABS: { value: LibraryTab; label: string }[] = [
   { value: 'saved', label: 'Saved' },
@@ -138,7 +139,7 @@ export default function Library() {
   const [editing, setEditing] = useState(false);
   const [sort, setSort] = useState<Sort>('recent');
   const [sortOpen, setSortOpen] = useState(false);
-  const pager = useRef<ScrollView>(null);
+  const pager = useRef<ScrollViewInstance>(null);
   const page = useRef(TABS.findIndex((t) => t.value === libraryTab));
 
   const goTo = useCallback(

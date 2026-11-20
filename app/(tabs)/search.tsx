@@ -8,6 +8,7 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type ViewInstance,
 } from 'react-native';
 
 import colors from '@/constants/colors';
@@ -86,6 +87,14 @@ export default function Search() {
     if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
   };
 
+  const openResult = useCallback(
+    (t: Title, art: ViewInstance | null) => {
+      addRecent(text);
+      open(t, art);
+    },
+    [addRecent, open, text]
+  );
+
   if (!hasTmdb()) {
     return (
       <View className="flex-1">
@@ -94,14 +103,6 @@ export default function Search() {
       </View>
     );
   }
-
-  const openResult = useCallback(
-    (t: Title, art: View | null) => {
-      addRecent(text);
-      open(t, art);
-    },
-    [addRecent, open, text]
-  );
 
   const header = (
     <>
@@ -260,7 +261,7 @@ export default function Search() {
           onEndReached={search.loadMore}
           onEndReachedThreshold={0.6}
           ListEmptyComponent={
-            search.loading ? null : (
+            search.loading ? undefined : (
               <EmptyState
                 title="No people found"
                 body={
@@ -306,7 +307,7 @@ export default function Search() {
                 <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
                   {search.total.toLocaleString()} {search.total === 1 ? 'result' : 'results'}
                 </Text>
-              ) : null
+              ) : undefined
             }
             ListEmptyComponent={
               search.loading ? (
@@ -329,7 +330,7 @@ export default function Search() {
                 <View className="items-center py-6">
                   <ActivityIndicator color={colors.t2} />
                 </View>
-              ) : null
+              ) : undefined
             }
             initialNumToRender={12}
             maxToRenderPerBatch={9}

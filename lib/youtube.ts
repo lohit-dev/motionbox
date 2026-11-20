@@ -28,34 +28,41 @@ function innertube(): Promise<Innertube> {
   if (!client) {
     // Imported lazily so the library only loads when a trailer is actually played
     client = import('youtubei.js/react-native')
-      .then(({ Innertube, UniversalCache }) =>
-        Innertube.create({ cache: new UniversalCache(false), generate_session_locally: true })
+      .then(({ Innertube }) =>
+        Innertube.create({ generate_session_locally: true, retrieve_player: false })
       )
       .catch((error) => {
         client = null;
-        console.warn('[trailer] could not start youtubei.js:', error);
+        if (__DEV__)
+          console.error('[youtube] InnerTube initialization failed', error?.stack ?? error);
         throw error;
       });
   }
   return client;
 }
 
-/** getBasicInfo takes the client name either as an option or as a plain argument, by version. */
-async function basicInfo(yt: Innertube, id: string, name: string) {
-  try {
-    const info = await yt.getBasicInfo(id, { client: name });
-    if (info?.streaming_data) return info;
-  } catch {}
-  return yt.getBasicInfo(id, name);
+async function basicInfo(yt: Innertube, id: string, name: 'IOS' | 'TV' | 'ANDROID' | 'WEB') {
+  const info = await yt.getBasicInfo(id, { client: name });
+  if (!info?.streaming_data) {
+    const reason = info?.playability_status?.reason ?? info?.playability_status?.status;
+    throw new Error(
+      `YouTube returned no streaming data for ${name}: ${reason ?? 'unknown reason'}`
+    );
+  }
+  return info;
 }
 
 /**
  * Clients to try, best first. YouTube treats each one differently and blocks different ones from
  * time to time, so a single failure is expected and the next client usually works.
  */
-const CLIENTS = ['IOS', 'TV', 'ANDROID', 'WEB'];
+const CLIENTS = ['IOS', 'TV', 'ANDROID', 'WEB'] as const;
 
-async function fromClient(yt: Innertube, id: string, name: string): Promise<Stream> {
+async function fromClient(
+  yt: Innertube,
+  id: string,
+  name: (typeof CLIENTS)[number]
+): Promise<Stream> {
   const info = await basicInfo(yt, id, name);
   const status = info?.playability_status;
   if (status && status.status !== 'OK') {
@@ -64,10 +71,30 @@ async function fromClient(yt: Innertube, id: string, name: string): Promise<Stre
   // HLS carries video and audio together, adaptive, usually up to 1080p
   const hls: string | undefined = info?.streaming_data?.hls_manifest_url;
   if (hls) return { uri: hls, hls: true };
-  // Otherwise the best single file holding both tracks (usually 360p or 720p)
-  const format = info.chooseFormat({ type: 'video+audio', quality: 'best' });
-  const uri: string | undefined = format?.url ?? (await format?.decipher(yt.session.player));
-  if (!uri) throw new Error('No playable format');
+  // Use direct muxed MP4 formats: youtubei.js needs an external JS interpreter
+  // to decipher ciphered URLs in React Native.
+  const formats = info.streaming_data.formats ?? [];
+  const directFormats = formats
+    .filter(
+      (candidate: any) =>
+        candidate.url &&
+        candidate.has_audio &&
+        candidate.has_video &&
+        candidate.mime_type?.startsWith('video/mp4')
+    )
+    .sort(
+      (a: any, b: any) => (b.height ?? 0) - (a.height ?? 0) || (b.bitrate ?? 0) - (a.bitrate ?? 0)
+    );
+  const format = directFormats[0];
+  const uri: string | undefined = format?.url;
+  if (__DEV__) {
+    console.log(`[youtube] ${name} direct MP4 formats`, {
+      count: directFormats.length,
+      selectedItag: format?.itag,
+      selectedQuality: format?.quality_label,
+    });
+  }
+  if (!uri) throw new Error(`No direct muxed MP4 format from ${name}`);
   return { uri, hls: false };
 }
 
@@ -80,7 +107,7 @@ async function resolve(id: string): Promise<Stream> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       problems.push(`${name}: ${message}`);
-      console.warn(`[trailer] ${name} client failed for ${id}: ${message}`);
+      if (__DEV__) console.warn(`[youtube] ${name} client failed: ${message}`);
     }
   }
   throw new Error(problems.join(' | '));

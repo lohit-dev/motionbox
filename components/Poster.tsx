@@ -1,5 +1,5 @@
 import { memo, useRef } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type ViewInstance } from 'react-native';
 
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
@@ -17,7 +17,7 @@ interface PosterProps {
   showScore?: boolean;
   subtitle?: string;
   /** Receives the artwork view so the caller can fly it into the detail page */
-  onPress?: (title: Title, art: View | null) => void;
+  onPress?: (title: Title, art: ViewInstance | null) => void;
 }
 
 function PosterBase({
@@ -29,7 +29,7 @@ function PosterBase({
   subtitle,
   onPress,
 }: PosterProps) {
-  const art = useRef<View>(null);
+  const art = useRef<ViewInstance>(null);
   return (
     <Pressable
       accessibilityRole="button"

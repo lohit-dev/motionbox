@@ -28,9 +28,7 @@ export function OfflineBanner({
         backgroundColor: colors.s1,
       }}>
       <Icon name="wifiOff" size={20} color={colors.t2} />
-      <Text className="flex-1 text-[14px] leading-5 text-t2">
-        {message}
-      </Text>
+      <Text className="flex-1 text-[14px] leading-5 text-t2">{message}</Text>
       <Pressable accessibilityRole="button" onPress={onRetry} scale={0.94}>
         <Text className="text-[14px] font-bold text-white">Retry</Text>
       </Pressable>
