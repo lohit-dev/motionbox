@@ -6,8 +6,8 @@ import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Segmented } from '@/components/Segmented';
 import { WeekStrip } from '@/components/WeekStrip';
-import { airing } from '@/data/airing';
 import { getTitle } from '@/data/titles';
+import { useAiringWeek } from '@/hooks/useAiringWeek';
 import { currentWeek } from '@/lib/calendar';
 import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
@@ -23,7 +23,8 @@ export default function Airing() {
   const { airingDay, airingSegment, reminders, setAiringDay, setAiringSegment, toggleReminder } =
     useApp();
 
-  const rows = (airing[airingDay] ?? []).filter(
+  const { schedule } = useAiringWeek(week);
+  const rows = (schedule[airingDay] ?? []).filter(
     (e) => airingSegment === 'all' || reminders.includes(e.id)
   );
   const open = useOpenTitle();

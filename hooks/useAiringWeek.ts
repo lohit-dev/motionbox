@@ -4,6 +4,8 @@ import { airing } from '@/data/airing';
 import { hasTmdb, loadAiringWeek } from '@/lib/api';
 import type { AiringEntry } from '@/types';
 
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 /** Airing schedule per weekday (Sunday first). TMDB gives the day, so entries have no clock time. */
 export function useAiringWeek(week: { index: number; date: number }[]) {
   const [schedule, setSchedule] = useState<AiringEntry[][]>(airing);
@@ -27,7 +29,7 @@ export function useAiringWeek(week: { index: number; date: number }[]) {
             day.map((t) => ({
               id: t.id,
               episode: 'New episode',
-              time: i === todayIndex ? 'Today' : 'New episode',
+              time: i === todayIndex ? 'Airs today' : `Airs ${DAYS[i]}`,
             }))
           )
         );
