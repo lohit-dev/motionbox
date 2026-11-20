@@ -17,6 +17,7 @@ import { Pressable } from '@/components/ui/Pressable';
 import { browseTiles, genres, recentSearches, trendingSearches } from '@/data/extras';
 import { people } from '@/data/people';
 import { getTitle, titles } from '@/data/titles';
+import { useSearchTitles } from '@/hooks/useSearchTitles';
 import { kindLine } from '@/lib/format';
 import { useOpenTitle } from '@/lib/flight';
 import type { Title, TitleKind } from '@/types';
@@ -47,20 +48,26 @@ export default function Search() {
   const mode: 'idle' | 'typing' | 'results' =
     submitted || filtering ? 'results' : q ? 'typing' : 'idle';
 
-  const matches = useMemo(
-    () =>
-      titles.filter(
-        (t) =>
-          (!q ||
-            t.name.toLowerCase().includes(q) ||
-            t.genres.some((g) => g.toLowerCase().includes(q)) ||
-            t.cast.some((c) => c.name.toLowerCase().includes(q))) &&
-          (filters.kind === 'all' || t.kind === filters.kind) &&
-          (!filters.genre || t.genres.includes(filters.genre)) &&
-          t.score >= filters.minScore
-      ),
-    [q, filters]
-  );
+  const remote = useSearchTitles(query, filters.genre);
+  const matches = useMemo(() => {
+    const pass = (t: Title) =>
+      (filters.kind === 'all' || t.kind === filters.kind) && t.score >= filters.minScore;
+    // Live TMDB results when a token is set, otherwise the bundled titles
+    if (remote.results) {
+      return remote.results.filter(
+        (t) => pass(t) && (!filters.genre || !q || t.genres.includes(filters.genre))
+      );
+    }
+    return titles.filter(
+      (t) =>
+        (!q ||
+          t.name.toLowerCase().includes(q) ||
+          t.genres.some((g) => g.toLowerCase().includes(q)) ||
+          t.cast.some((c) => c.name.toLowerCase().includes(q))) &&
+        (!filters.genre || t.genres.includes(filters.genre)) &&
+        pass(t)
+    );
+  }, [q, filters, remote.results]);
   const peopleMatches = useMemo(
     () => (q ? people.filter((p) => p.name.toLowerCase().includes(q)) : []),
     [q]
