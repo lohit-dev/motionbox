@@ -109,7 +109,7 @@ export function FlightProvider({ children }: { children: ReactNode }) {
       // Screen stays mounted (and fades itself out) until the flight has landed
       setTimeout(
         () => {
-          router.back();
+          if (router.canGoBack()) router.back();
           setClosingId(null);
         },
         canFly ? DURATION : 220

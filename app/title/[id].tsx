@@ -42,6 +42,7 @@ import { genreLine, kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
 import { getTitle } from '@/lib/titles';
 import { openClip, openTrailer } from '@/lib/trailer';
+import { warmUpYouTube } from '@/lib/youtube';
 import { useApp, useIsSaved } from '@/store/store';
 import type { Clip } from '@/types';
 
@@ -70,6 +71,16 @@ export default function TitleDetail() {
 
   // Was this screen opened by a card flying into it? Decides which entrance to play.
   const withFlight = useRef(flying).current;
+  const [ready, setReady] = useState(!withFlight);
+  // Loading YouTube's player script takes a second, so start while the person reads the page
+  useEffect(() => {
+    if (title?.clips?.length) warmUpYouTube();
+  }, [title?.clips?.length]);
+  useEffect(() => {
+    if (ready) return;
+    const t = setTimeout(() => setReady(true), 560);
+    return () => clearTimeout(t);
+  }, [ready]);
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
@@ -133,8 +144,7 @@ export default function TitleDetail() {
     () => scrollY.value > heroHeight - 130,
     (show, was) => {
       if (show !== was) dockY.value = withSpring(show ? 0 : 160, springs.pop);
-    },
-    [heroHeight]
+    }
   );
   const dock = useAnimatedStyle(() => ({ transform: [{ translateY: dockY.value }] }));
 
@@ -241,6 +251,7 @@ export default function TitleDetail() {
             <Animated.View style={heroStretch}>
               <PosterArt
                 title={title}
+                textless
                 width={width}
                 height={heroHeight}
                 radius={0}
@@ -315,102 +326,107 @@ export default function TitleDetail() {
               </Pressable>
             ) : null}
 
-            {loading && !title.detailed ? (
-              <View className="gap-3 px-gutter pt-8">
-                <Skeleton width={140} height={22} />
-                <View className="flex-row gap-3">
-                  <Skeleton width={220} height={124} radius={16} />
-                  <Skeleton width={220} height={124} radius={16} />
-                </View>
-              </View>
-            ) : null}
-
-            {clips.length ? (
+            {/* Below-the-fold sections wait for the entrance to finish so the flight stays at 60fps */}
+            {ready ? (
               <>
-                <SectionHeader title="Trailers" />
-                <Rail
-                  data={clips}
-                  keyExtractor={(c) => `${c.key ?? c.title}`}
-                  renderItem={(c) => (
-                    <ClipCard title={title} clip={c} onPress={() => playClip(c)} />
-                  )}
-                />
-              </>
-            ) : null}
-
-            {title.cast.length ? (
-              <>
-                <SectionHeader title="Cast & crew" />
-                <Rail
-                  data={title.cast}
-                  keyExtractor={(c) => `${c.id}-${c.role}`}
-                  gap={16}
-                  renderItem={(c) => (
-                    <Pressable
-                      accessibilityRole="button"
-                      scale={0.95}
-                      onPress={() =>
-                        router.push({ pathname: '/person/[id]', params: { id: String(c.id) } })
-                      }
-                      className="items-center"
-                      style={{ width: 84 }}>
-                      <Avatar name={c.name} size={72} photoPath={c.photoPath} />
-                      <Text
-                        numberOfLines={1}
-                        className="mt-2 text-[12.5px] font-semibold text-white">
-                        {c.name}
-                      </Text>
-                      <Text numberOfLines={1} className="text-[11.5px] text-t3">
-                        {c.role}
-                      </Text>
-                    </Pressable>
-                  )}
-                />
-              </>
-            ) : null}
-
-            {reviews.length ? (
-              <>
-                <SectionHeader title="Reviews" />
-                <Rail
-                  data={reviews}
-                  keyExtractor={(r) => `${r.user}-${r.when}`}
-                  renderItem={(r) => (
-                    <View style={{ width: 300 }}>
-                      <ReviewCard review={r} />
+                {loading && !title.detailed ? (
+                  <View className="gap-3 px-gutter pt-8">
+                    <Skeleton width={140} height={22} />
+                    <View className="flex-row gap-3">
+                      <Skeleton width={220} height={124} radius={16} />
+                      <Skeleton width={220} height={124} radius={16} />
                     </View>
-                  )}
-                />
-              </>
-            ) : null}
+                  </View>
+                ) : null}
 
-            {related.length ? (
-              <>
-                <SectionHeader title="More like this" />
-                <Rail
-                  data={related}
-                  keyExtractor={(t) => t.id}
-                  renderItem={(t) => <Poster title={t} showScore onPress={openTitle} />}
-                />
-              </>
-            ) : null}
+                {clips.length ? (
+                  <>
+                    <SectionHeader title="Trailers" />
+                    <Rail
+                      data={clips}
+                      keyExtractor={(c) => `${c.key ?? c.title}`}
+                      renderItem={(c) => (
+                        <ClipCard title={title} clip={c} onPress={() => playClip(c)} />
+                      )}
+                    />
+                  </>
+                ) : null}
 
-            <SectionHeader title="About" />
-            <View className="mx-gutter overflow-hidden rounded-card bg-s1">
-              {about.map(([k, v], i) => (
-                <View
-                  key={k}
-                  className={`flex-row items-start justify-between gap-6 px-4 py-3.5 ${
-                    i ? 'border-t border-white/5' : ''
-                  }`}>
-                  <Text className="text-[14px] text-t3">{k}</Text>
-                  <Text className="flex-1 text-right text-[14px] font-semibold text-white">
-                    {v}
-                  </Text>
+                {title.cast.length ? (
+                  <>
+                    <SectionHeader title="Cast & crew" />
+                    <Rail
+                      data={title.cast}
+                      keyExtractor={(c) => `${c.id}-${c.role}`}
+                      gap={16}
+                      renderItem={(c) => (
+                        <Pressable
+                          accessibilityRole="button"
+                          scale={0.95}
+                          onPress={() =>
+                            router.push({ pathname: '/person/[id]', params: { id: String(c.id) } })
+                          }
+                          className="items-center"
+                          style={{ width: 84 }}>
+                          <Avatar name={c.name} size={72} photoPath={c.photoPath} />
+                          <Text
+                            numberOfLines={1}
+                            className="mt-2 text-[12.5px] font-semibold text-white">
+                            {c.name}
+                          </Text>
+                          <Text numberOfLines={1} className="text-[11.5px] text-t3">
+                            {c.role}
+                          </Text>
+                        </Pressable>
+                      )}
+                    />
+                  </>
+                ) : null}
+
+                {reviews.length ? (
+                  <>
+                    <SectionHeader title="Reviews" />
+                    <Rail
+                      data={reviews}
+                      keyExtractor={(r) => `${r.user}-${r.when}`}
+                      renderItem={(r) => (
+                        <View style={{ width: 300 }}>
+                          <ReviewCard review={r} />
+                        </View>
+                      )}
+                    />
+                  </>
+                ) : null}
+
+                {related.length ? (
+                  <>
+                    <SectionHeader title="More like this" />
+                    <Rail
+                      data={related}
+                      keyExtractor={(t) => t.id}
+                      renderItem={(t) => <Poster title={t} showScore onPress={openTitle} />}
+                    />
+                  </>
+                ) : null}
+
+                <SectionHeader title="About" />
+                <View className="mx-gutter overflow-hidden rounded-card bg-s1">
+                  {about.map(([k, v], i) => (
+                    <View
+                      key={k}
+                      className={`flex-row items-start justify-between gap-6 px-4 py-3.5 ${
+                        i ? 'border-t border-white/5' : ''
+                      }`}>
+                      <Text className="text-[14px] text-t3">{k}</Text>
+                      <Text className="flex-1 text-right text-[14px] font-semibold text-white">
+                        {v}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-            <View style={{ height: 130 + bottom }} />
+              </>
+            ) : null}
+            <View style={{ height: 110 + bottom }} />
           </Animated.View>
         </Animated.ScrollView>
 
@@ -469,7 +485,10 @@ export default function TitleDetail() {
         {/* Floating bar: save, trailer, share */}
         <Animated.View
           pointerEvents="box-none"
-          style={[{ position: 'absolute', left: 20, right: 20, bottom: bottom + 12 }, dock]}>
+          style={[
+            { position: 'absolute', left: 20, right: 20, bottom: Math.max(bottom - 14, 10) },
+            dock,
+          ]}>
           <View className="rounded-full border border-white/10 bg-s2 p-2">{actions}</View>
         </Animated.View>
       </Animated.View>
