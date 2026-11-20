@@ -17,14 +17,12 @@ const AndroidSystemBars =
     : null;
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
   anchor: '(tabs)',
 };
 
 // NativeWind v4 imports this deprecated component internally; keep that
 // third-party warning from triggering the broken React Native dev toast.
 LogBox.ignoreLogs(['ImageBackground is deprecated and will be removed in a future release.']);
-LogBox.ignoreLogs(['`unstable_settings.initialRouteName` is deprecated. Use `unstable_settings.anchor` instead.']);
 
 export default function Layout() {
   return (
@@ -52,7 +50,23 @@ export default function Layout() {
               />
               <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right' }} />
+              {/* Slides up from the bottom like an iPhone sheet; a close button replaces the back arrow */}
+              <Stack.Screen
+                name="person/[id]"
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                  contentStyle: { backgroundColor: colors.ink },
+                }}
+              />
+              <Stack.Screen
+                name="player/[key]"
+                options={{
+                  presentation: 'fullScreenModal',
+                  animation: 'fade',
+                  contentStyle: { backgroundColor: '#000' },
+                }}
+              />
             </Stack>
           </FlightProvider>
           <LaunchSplash />

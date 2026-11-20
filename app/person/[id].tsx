@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -29,9 +29,17 @@ export default function Person() {
     <View className="flex-1 bg-ink">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: top + 8, paddingBottom: 48 }}>
-        <View className="px-gutter">
-          <CircleButton icon="back" label="Back" size={44} onPress={() => router.back()} />
+        contentContainerStyle={{
+          paddingTop: Platform.OS === 'ios' ? 16 : top + 8,
+          paddingBottom: 48,
+        }}>
+        <View className="items-end px-gutter">
+          <CircleButton
+            icon="close"
+            label="Close"
+            size={40}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          />
         </View>
 
         {loading ? (
