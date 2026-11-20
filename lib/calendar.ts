@@ -1,5 +1,6 @@
-import { weekdays } from '@/data/airing';
 import type { Weekday } from '@/types';
+
+const weekdays: Weekday[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export interface WeekDay {
   /** 0 = Sunday, matches Date#getDay() and the airing schedule index */

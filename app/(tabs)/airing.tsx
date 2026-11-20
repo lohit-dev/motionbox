@@ -1,15 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { AiringCard } from '@/components/AiringCard';
+import { NeedsKey } from '@/components/NeedsKey';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Segmented } from '@/components/Segmented';
+import { Skeleton } from '@/components/Skeleton';
 import { WeekStrip } from '@/components/WeekStrip';
-import { getTitle } from '@/data/titles';
 import { useAiringWeek } from '@/hooks/useAiringWeek';
+import { hasTmdb } from '@/lib/api';
 import { currentWeek } from '@/lib/calendar';
 import { useOpenTitle } from '@/lib/flight';
+import { getTitle } from '@/lib/titles';
 import { useApp } from '@/store/store';
 import type { AiringSegment } from '@/types';
 
@@ -20,14 +24,30 @@ const SEGMENTS: { value: AiringSegment; label: string }[] = [
 
 export default function Airing() {
   const week = useMemo(() => currentWeek(), []);
-  const { airingDay, airingSegment, reminders, setAiringDay, setAiringSegment, toggleReminder } =
-    useApp();
+  const saved = useApp((s) => s.saved);
+  const reminders = useApp((s) => s.reminders);
+  const airingDay = useApp((s) => s.airingDay);
+  const airingSegment = useApp((s) => s.airingSegment);
+  const setAiringDay = useApp((s) => s.setAiringDay);
+  const setAiringSegment = useApp((s) => s.setAiringSegment);
+  const toggleReminder = useApp((s) => s.toggleReminder);
 
-  const { schedule } = useAiringWeek(week);
-  const rows = (schedule[airingDay] ?? []).filter(
-    (e) => airingSegment === 'all' || reminders.includes(e.id)
-  );
+  const [reload, setReload] = useState(0);
+  const { schedule, loading, failed } = useAiringWeek(reload);
   const open = useOpenTitle();
+
+  const rows = (schedule[airingDay] ?? []).filter(
+    (e) => airingSegment === 'all' || reminders.includes(e.id) || saved.includes(e.id)
+  );
+
+  if (!hasTmdb()) {
+    return (
+      <View className="flex-1">
+        <ScreenHeader title="Airing" />
+        <NeedsKey />
+      </View>
+    );
+  }
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
@@ -39,29 +59,35 @@ export default function Airing() {
 
       {/* key restarts the staggered entrance whenever the day or segment changes */}
       <View key={`${airingDay}-${airingSegment}`} className="gap-3 px-gutter pt-4">
-        {rows.map((entry, i) => {
-          const title = getTitle(entry.id);
-          if (!title) return null;
-          return (
-            <Reveal key={`${entry.id}-${entry.time}`} index={i}>
-              <AiringCard
-                entry={entry}
-                title={title}
-                reminded={reminders.includes(entry.id)}
-                onToggleReminder={toggleReminder}
-                onPress={open}
-              />
-            </Reveal>
-          );
-        })}
-        {rows.length === 0 ? (
+        {loading ? (
+          [0, 1, 2, 3].map((i) => <Skeleton key={i} height={112} radius={22} />)
+        ) : failed ? (
+          <OfflineBanner onRetry={() => setReload((n) => n + 1)} />
+        ) : (
+          rows.map((entry, i) => {
+            const title = getTitle(entry.id);
+            if (!title) return null;
+            return (
+              <Reveal key={`${entry.id}-${entry.time}`} index={i}>
+                <AiringCard
+                  entry={entry}
+                  title={title}
+                  reminded={reminders.includes(entry.id)}
+                  onToggleReminder={toggleReminder}
+                  onPress={open}
+                />
+              </Reveal>
+            );
+          })
+        )}
+        {!loading && !failed && rows.length === 0 ? (
           <View className="mt-16 items-center px-8">
             <Text className="text-xl font-bold text-white">
-              {airingSegment === 'mine' ? 'No reminders for this day' : 'Nothing airing'}
+              {airingSegment === 'mine' ? 'Nothing from your list' : 'Nothing airing'}
             </Text>
             <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
               {airingSegment === 'mine'
-                ? 'Tap the bell on any show to be reminded.'
+                ? 'Save a show or tap the bell on it to see it here.'
                 : 'Check another day.'}
             </Text>
           </View>

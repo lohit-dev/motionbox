@@ -7,7 +7,7 @@ import { Fade } from '@/components/Fade';
 import { PosterArt } from '@/components/PosterArt';
 import { Wordmark } from '@/components/Wordmark';
 import { Pill } from '@/components/ui/Pill';
-import { titles } from '@/data/titles';
+import { useHome } from '@/hooks/useHome';
 import { ease } from '@/lib/motion';
 import { useApp } from '@/store/store';
 
@@ -18,7 +18,9 @@ export default function Welcome() {
   const { bottom } = useSafeAreaInsets();
   const finish = useApp((s) => s.finishOnboarding);
   const col = (width - 40 - 16) / 3;
-  const wall = [titles.slice(0, 3), titles.slice(2, 5), titles.slice(4, 7)];
+  const { trending } = useHome();
+  // Three columns of three posters. Quiet grey tiles hold the place until artwork arrives.
+  const wall = [0, 1, 2].map((c) => [0, 1, 2].map((r) => trending[c * 3 + r] ?? null));
 
   return (
     <View className="flex-1 bg-ink">
@@ -27,9 +29,17 @@ export default function Welcome() {
         style={{ height: height * 0.62, overflow: 'hidden', paddingTop: 56 }}>
         {wall.map((c, ci) => (
           <View key={ci} className="gap-2" style={{ marginTop: ci === 1 ? 40 : 0 }}>
-            {c.map((t) => (
-              <PosterArt key={t.id} title={t} width={col} height={col * 1.5} radius={14} />
-            ))}
+            {c.map((t, ri) =>
+              t ? (
+                <PosterArt key={t.id} title={t} width={col} height={col * 1.5} radius={14} />
+              ) : (
+                <View
+                  key={ri}
+                  className="bg-s1"
+                  style={{ width: col, height: col * 1.5, borderRadius: 14 }}
+                />
+              )
+            )}
           </View>
         ))}
       </View>

@@ -123,7 +123,7 @@ export const useApp = create<AppState>()(
           updatesRead: !!s.updatesRead,
           onboarded: !!s.onboarded,
           libraryTab: (s.libraryTab as LibraryTab) ?? 'saved',
-        } as AppState;
+        } as unknown as AppState;
       },
       onRehydrateStorage: () => (state) => {
         if (state) setTmdbLanguage(LANGUAGES[state.language]?.code ?? 'en-US');

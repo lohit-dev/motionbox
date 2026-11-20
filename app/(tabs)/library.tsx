@@ -10,7 +10,8 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
-import { getTitle } from '@/data/titles';
+import { Skeleton } from '@/components/Skeleton';
+import { useTitles } from '@/hooks/useTitle';
 import { useOpenTitle } from '@/lib/flight';
 import { useApp } from '@/store/store';
 import type { LibraryTab, Title } from '@/types';
@@ -22,9 +23,9 @@ const TABS: { value: LibraryTab; label: string }[] = [
 ];
 
 const EMPTY: Record<LibraryTab, [string, string]> = {
-  saved: ['Nothing saved yet', 'Tap the plus on any title to keep it here.'],
-  watching: ['Nothing in progress', 'Start a trailer or episode and it will wait for you here.'],
-  watched: ['Nothing watched yet', 'Finished titles show up here.'],
+  saved: ['Nothing saved yet', 'Tap the bookmark on any title to keep it here.'],
+  watching: ['Nothing in progress', 'Mark a title as watching from its ⋯ menu and it will wait for you here.'],
+  watched: ['Nothing watched yet', 'Mark a title as watched from its ⋯ menu and it shows up here.'],
 };
 
 type Sort = 'recent' | 'az' | 'rating';
@@ -40,24 +41,27 @@ const GAP = 12;
 export default function Library() {
   const router = useRouter();
   const open = useOpenTitle();
-  const { libraryTab, setLibraryTab, saved, watching, watched, toggleSave, markWatched } = useApp();
+  const { libraryTab, setLibraryTab, saved, watching, watched } = useApp();
+  const toggleSave = useApp((s) => s.toggleSave);
+  const toggleWatching = useApp((s) => s.toggleWatching);
+  const unmarkWatched = useApp((s) => s.unmarkWatched);
   const [editing, setEditing] = useState(false);
   const [sort, setSort] = useState<Sort>('recent');
   const [sortOpen, setSortOpen] = useState(false);
 
+  const ids = libraryTab === 'saved' ? saved : libraryTab === 'watching' ? watching : watched;
+  const { titles, loading } = useTitles(ids);
+
   const data = useMemo(() => {
-    const ids =
-      libraryTab === 'saved' ? saved : libraryTab === 'watching' ? Object.keys(watching) : watched;
-    const list = ids.map((id) => getTitle(id)).filter((t): t is Title => !!t);
-    if (sort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === 'rating') return [...list].sort((a, b) => b.score - a.score);
-    return list;
-  }, [libraryTab, saved, watching, watched, sort]);
+    if (sort === 'az') return [...titles].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'rating') return [...titles].sort((a, b) => b.score - a.score);
+    return titles;
+  }, [titles, sort]);
 
   const remove = (t: Title) => {
     if (libraryTab === 'saved') toggleSave(t.id);
-    else if (libraryTab === 'watching') markWatched(t.id);
-    else useApp.setState((s) => ({ watched: s.watched.filter((id) => id !== t.id) }));
+    else if (libraryTab === 'watching') toggleWatching(t.id);
+    else unmarkWatched(t.id);
   };
 
   return (
@@ -95,12 +99,20 @@ export default function Library() {
         contentContainerStyle={{ padding: 20, gap: GAP }}
         columnWrapperStyle={{ gap: GAP }}
         ListEmptyComponent={
+          loading ? (
+            <View className="flex-row gap-3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} width={106} height={159} radius={14} />
+              ))}
+            </View>
+          ) : (
           <EmptyState
             title={EMPTY[libraryTab][0]}
             body={EMPTY[libraryTab][1]}
             action="Browse trending"
             onAction={() => router.navigate('/search')}
           />
+          )
         }
         renderItem={({ item, index }) => (
           <Reveal index={index} style={{ flex: 1 / COLUMNS }}>
@@ -108,11 +120,6 @@ export default function Library() {
               <Poster
                 title={item}
                 width={106}
-                subtitle={
-                  libraryTab === 'watching'
-                    ? `${Math.round(watching[item.id] ?? 0)}% watched`
-                    : undefined
-                }
                 onPress={editing ? () => remove(item) : open}
               />
               {editing ? (
