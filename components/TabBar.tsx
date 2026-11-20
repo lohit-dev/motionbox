@@ -3,18 +3,20 @@ import type { ComponentProps } from 'react';
 import { Pressable as RNPressable, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
+  Easing,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import colors from '@/constants/colors';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { springs } from '@/lib/motion';
+
+const tabEase = Easing.bezier(0.2, 0.8, 0.2, 1);
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
@@ -36,27 +38,30 @@ function TabItem({
   label: string;
   onPress: () => void;
 }) {
+  // 0 = idle, 1 = active. The capsule widens, fills white and the label slides open together.
+  const on = useSharedValue(focused ? 1 : 0);
   const pop = useSharedValue(1);
 
   useEffect(() => {
+    on.value = withTiming(focused ? 1 : 0, { duration: 380, easing: tabEase });
     if (focused) {
       pop.value = 0.55;
       pop.value = withSpring(1, springs.pop);
     }
-  }, [focused, pop]);
+  }, [focused, on, pop]);
 
+  const capsule = useAnimatedStyle(() => ({
+    flexGrow: 1 + on.value * 1.4,
+    backgroundColor: interpolateColor(on.value, [0, 1], ['rgba(255,255,255,0)', colors.white]),
+  }));
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const darkIcon = useAnimatedStyle(() => ({ opacity: on.value }));
+  const lightIcon = useAnimatedStyle(() => ({ opacity: 1 - on.value }));
+  const text = useAnimatedStyle(() => ({ opacity: on.value, maxWidth: on.value * 90 }));
 
   return (
     <Animated.View
-      layout={LinearTransition.springify().damping(22).stiffness(240)}
-      style={{
-        flex: focused ? 2.4 : 1,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: focused ? colors.white : 'transparent',
-        overflow: 'hidden',
-      }}>
+      style={[{ flexBasis: 0, height: 48, borderRadius: 24, overflow: 'hidden' }, capsule]}>
       <RNPressable
         accessibilityRole="tab"
         accessibilityLabel={label}
@@ -70,22 +75,18 @@ function TabItem({
           gap: 8,
         }}>
         <Animated.View style={iconStyle}>
-          <Icon
-            name={icon}
-            size={22}
-            color={focused ? colors.ink : colors.t2}
-            filled={focused && icon === 'bookmark'}
-          />
+          <Animated.View style={lightIcon}>
+            <Icon name={icon} size={22} color={colors.t2} />
+          </Animated.View>
+          <Animated.View style={[{ position: 'absolute' }, darkIcon]}>
+            <Icon name={icon} size={22} color={colors.ink} filled={icon === 'bookmark'} />
+          </Animated.View>
         </Animated.View>
-        {focused ? (
-          <Animated.Text
-            entering={FadeIn.duration(220)}
-            exiting={FadeOut.duration(100)}
-            numberOfLines={1}
-            style={{ color: colors.ink, fontSize: 15, fontWeight: '700' }}>
-            {label}
-          </Animated.Text>
-        ) : null}
+        <Animated.Text
+          numberOfLines={1}
+          style={[{ color: colors.ink, fontSize: 15, fontWeight: '700' }, text]}>
+          {label}
+        </Animated.Text>
       </RNPressable>
     </Animated.View>
   );

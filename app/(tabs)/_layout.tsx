@@ -14,7 +14,12 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.ink } }}>
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: colors.ink },
+        // Screens cross-fade like the prototype's panes
+        animation: 'fade',
+      }}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="search" />
       <Tabs.Screen name="library" />
