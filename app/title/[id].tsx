@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
@@ -54,7 +54,7 @@ export default function TitleDetail() {
   const closing = useClosing();
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
-  const { title, loading } = useTitle(id);
+  const { title, loading, failed } = useTitle(id);
   const toggleSave = useApp((s) => s.toggleSave);
   const progress = useApp((s) => s.watching[id]);
   const language = useApp((s) => s.language);
@@ -128,14 +128,25 @@ export default function TitleDetail() {
     ],
   }));
 
+  // The root stack can be entered without a dynamic segment on a fresh native launch.
+  // Never leave the user stranded on an empty detail route.
+  if (!id || (!parseId(id) && !getTitle(id))) return <Redirect href="/" />;
+
   if (!title) {
     return (
       <View className="flex-1 items-center justify-center bg-ink px-8">
         <Text className="text-center text-xl font-bold text-white">
-          {loading ? 'Loading…' : 'Title not found'}
+          {loading ? 'Loading…' : failed ? 'Could not load this title' : 'Title not found'}
         </Text>
         <View className="mt-6">
-          <Pill title="Go back" tone="ghost" onPress={() => router.back()} />
+          <Pill
+            title={router.canGoBack() ? 'Go back' : 'Go to home'}
+            tone="ghost"
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/');
+            }}
+          />
         </View>
       </View>
     );
@@ -220,7 +231,7 @@ export default function TitleDetail() {
                 width={width}
                 height={heroHeight}
                 radius={0}
-                size="w780"
+                size="w1280"
                 bordered={false}
               />
             </Animated.View>
@@ -243,7 +254,7 @@ export default function TitleDetail() {
               </Text>
               {title.logoPath ? (
                 <Image
-                  source={{ uri: imageUrl(title.logoPath, 'w500') ?? undefined }}
+                  source={{ uri: imageUrl(title.logoPath, 'w780') ?? undefined }}
                   resizeMode="contain"
                   accessibilityLabel={title.name}
                   style={{ width: '88%', height: 104, marginTop: 8 }}

@@ -92,7 +92,7 @@ export default function Player() {
           width={width}
           height={width * 0.78 + top}
           radius={0}
-          size="w780"
+          size="w1280"
           bordered={false}
         />
         <Fade hold={0.3} />
@@ -213,7 +213,7 @@ export default function Player() {
               onPress={() => pick(i)}
               className="flex-row items-center gap-3 py-2.5">
               <View>
-                <PosterArt title={title} width={120} height={68} radius={12} size="w185" />
+                <PosterArt title={title} width={120} height={68} radius={12} size="w342" />
                 {i === clipIndex ? (
                   <View className="absolute inset-0 items-center justify-center rounded-xl bg-black/55">
                     <Icon name="play" size={14} />

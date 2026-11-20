@@ -96,7 +96,7 @@ export function HeroCarousel({
                   width={width}
                   height={height}
                   radius={0}
-                  size="w780"
+                  size="w1280"
                   bordered={false}
                 />
               </View>
@@ -123,7 +123,7 @@ export function HeroCarousel({
                     className="mt-2 h-[100px] w-full items-center justify-center">
                     {item.title.logoPath ? (
                       <Image
-                        source={{ uri: imageUrl(item.title.logoPath, 'w500') ?? undefined }}
+                        source={{ uri: imageUrl(item.title.logoPath, 'w780') ?? undefined }}
                         resizeMode="contain"
                         style={{ width: '84%', height: 100 }}
                         accessibilityLabel={item.title.name}

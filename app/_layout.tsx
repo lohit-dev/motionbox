@@ -2,6 +2,7 @@ import '../global.css';
 
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, TurboModuleRegistry } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -10,12 +11,21 @@ import colors from '@/constants/colors';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import { FlightProvider } from '@/lib/flight';
 
+const AndroidSystemBars =
+  Platform.OS === 'android' && TurboModuleRegistry.get('RNEdgeToEdge')
+    ? require('react-native-edge-to-edge').SystemBars
+    : null;
+
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
 export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.ink }}>
       <KeyboardProvider>
         <SafeAreaProvider>
-          <StatusBar style="light" />
+          {AndroidSystemBars ? <AndroidSystemBars style="light" /> : <StatusBar style="light" />}
           <FlightProvider>
             <Stack
               screenOptions={{
@@ -23,6 +33,7 @@ export default function Layout() {
                 contentStyle: { backgroundColor: colors.ink },
                 animation: 'fade',
               }}>
+              <Stack.Screen name="(tabs)" />
               {/* Transparent and instant: the card's artwork flies in over Home instead of Home fading out first */}
               <Stack.Screen
                 name="title/[id]"

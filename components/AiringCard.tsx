@@ -44,7 +44,7 @@ export function AiringCard({ entry, title, reminded, onToggleReminder, onPress }
       scale={0.985}
       onPress={() => onPress?.(title)}
       className="flex-row items-center gap-3 rounded-[22px] bg-s1 py-3.5 pl-3 pr-3.5">
-      <PosterArt title={title} width={56} height={84} radius={12} size="w185" />
+      <PosterArt title={title} width={56} height={84} radius={12} size="w342" />
       <View className="flex-1">
         <Text numberOfLines={1} className="text-lg font-bold tracking-tight text-white">
           {title.name}

@@ -29,7 +29,7 @@ export default function Updates() {
           <View
             className={`h-2 w-2 rounded-full ${u.unread && !updatesRead ? 'bg-white' : 'bg-transparent'}`}
           />
-          <PosterArt title={t} width={46} height={68} radius={10} size="w185" />
+          <PosterArt title={t} width={46} height={68} radius={10} size="w342" />
           <View className="flex-1">
             <Text className="text-[15px] leading-[21px] text-white">
               <Text className="font-bold">{t.name}</Text> {u.text}

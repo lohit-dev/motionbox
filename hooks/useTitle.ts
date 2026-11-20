@@ -10,7 +10,7 @@ import type { Title } from '@/types';
  */
 export function useTitle(id: string) {
   const [title, setTitle] = useState<Title | undefined>(() => getTitle(id));
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => !getTitle(id) && hasTmdb() && !!parseId(id));
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

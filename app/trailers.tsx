@@ -83,7 +83,7 @@ export default function Trailers() {
                 width={width}
                 height={height}
                 radius={0}
-                size="w780"
+                size="w1280"
                 bordered={false}
               />
               <Fade hold={0.3} />

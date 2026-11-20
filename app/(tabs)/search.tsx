@@ -200,21 +200,20 @@ export default function Search() {
             <Icon name="search" size={18} color="rgba(255,255,255,0.54)" />
             <Text className="flex-1 text-base text-white">Search for “{query}”</Text>
           </Pressable>
-          {matches.map((t, i) => (
-            <Reveal key={t.id} index={i}>
-              <Pressable
-                onPress={() => open(t)}
-                scale={0.98}
-                className="flex-row items-center gap-3 py-2">
-                <PosterArt title={t} width={44} height={66} radius={10} size="w185" />
-                <View className="flex-1">
-                  <Text numberOfLines={1} className="text-base font-semibold text-white">
-                    {t.name}
-                  </Text>
-                  <Text className="mt-0.5 text-[12.5px] text-t3">{kindLine(t)}</Text>
-                </View>
-              </Pressable>
-            </Reveal>
+          {matches.map((t) => (
+            <Pressable
+              key={t.id}
+              onPress={() => open(t)}
+              scale={0.98}
+              className="h-[82px] flex-row items-center gap-3">
+              <PosterArt title={t} width={44} height={66} radius={10} size="w342" />
+              <View className="flex-1">
+                <Text numberOfLines={1} className="text-base font-semibold text-white">
+                  {t.name}
+                </Text>
+                <Text className="mt-0.5 text-[12.5px] text-t3">{kindLine(t)}</Text>
+              </View>
+            </Pressable>
           ))}
           {peopleMatches.map((p) => (
             <Pressable

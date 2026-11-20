@@ -23,7 +23,7 @@ export function Ring({ title, seen = false, onPress }: RingProps) {
       <View
         className={`items-center justify-center rounded-full border-2 ${seen ? 'border-s3' : 'border-white'}`}
         style={{ width: 70, height: 70 }}>
-        <PosterArt title={title} width={60} height={60} radius={30} size="w185" bordered={false} />
+        <PosterArt title={title} width={60} height={60} radius={30} size="w342" bordered={false} />
       </View>
       <Text numberOfLines={1} className="mt-1.5 text-[11.5px] font-medium text-t2">
         {title.name.split(' ')[0]}

@@ -142,7 +142,7 @@ function Overlay({ flight, onDone }: { flight: Flight; onDone: () => void }) {
   const target = { x: 0, y: flight.offsetY ?? 0, width, height: heroHeightFor(width), radius: 0 };
   const reverse = !!flight.reverse;
   const p = useSharedValue(reverse ? 1 : 0);
-  const uri = imageUrl(flight.title.posterPath, 'w780');
+  const uri = imageUrl(flight.title.posterPath, 'w1280');
   const done = useRef(onDone);
   done.current = onDone;
 

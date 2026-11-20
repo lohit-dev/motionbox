@@ -86,7 +86,7 @@ export function PosterArt({
   width,
   height,
   radius = 14,
-  size = 'w342',
+  size = 'w500',
   bordered = true,
 }: PosterArtProps) {
   const uri = imageUrl(title.posterPath, size);
