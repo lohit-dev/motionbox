@@ -34,6 +34,7 @@ export function clearApiCache() {
   seasons.clear();
   people.clear();
   home = null;
+  covers = null;
 }
 
 const list = (results: TmdbResult[], kind: 'movie' | 'tv') => {
@@ -262,4 +263,42 @@ export async function loadAiringWeek(days: Date[]) {
     )
   );
   return perDay.map((r) => list(r.results.slice(0, 10), 'tv'));
+}
+
+let covers: Promise<Record<string, string | null>> | null = null;
+
+/**
+ * One landscape backdrop per genre for the Browse tiles. Each genre takes its most popular
+ * title whose artwork no other genre has claimed, so no two tiles look the same.
+ */
+export function loadGenreCovers() {
+  if (!covers) {
+    const request = (async () => {
+      const names = Object.keys(GENRE_IDS);
+      const pages = await Promise.all(
+        names.map((genre) => {
+          const ids = GENRE_IDS[genre];
+          const kind = ids.movie ? 'movie' : 'tv';
+          return tmdb<Page<{ backdrop_path: string | null }>>(`/discover/${kind}`, {
+            with_genres: String(ids[kind] ?? ''),
+            sort_by: 'popularity.desc',
+            'vote_count.gte': '300',
+          }).catch(() => null);
+        })
+      );
+      const used = new Set<string>();
+      const out: Record<string, string | null> = {};
+      names.forEach((genre, i) => {
+        const pick = pages[i]?.results.find((r) => r.backdrop_path && !used.has(r.backdrop_path));
+        out[genre] = pick?.backdrop_path ?? null;
+        if (pick?.backdrop_path) used.add(pick.backdrop_path);
+      });
+      return out;
+    })();
+    covers = request;
+    request.catch(() => {
+      if (covers === request) covers = null;
+    });
+  }
+  return covers;
 }

@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   ScrollView,
+  Image,
   Text,
   View,
   useWindowDimensions,
@@ -16,7 +17,6 @@ import { Fade } from '@/components/Fade';
 import { FilterSheet } from '@/components/FilterSheet';
 import { NeedsKey } from '@/components/NeedsKey';
 import { Poster } from '@/components/Poster';
-import { PosterArt } from '@/components/PosterArt';
 import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SearchField } from '@/components/SearchField';
@@ -25,10 +25,12 @@ import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { Chip } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
+import { useGenreCovers } from '@/hooks/useGenreCovers';
 import { useHome } from '@/hooks/useHome';
 import { useSearch } from '@/hooks/useSearch';
 import { GENRES, hasTmdb } from '@/lib/api';
 import { useOpenTitle } from '@/lib/flight';
+import { imageUrl } from '@/lib/tmdb';
 import { useApp } from '@/store/store';
 import { NO_FILTERS, type Filters, type Title } from '@/types';
 
@@ -70,15 +72,7 @@ export default function Search() {
   const search = useSearch(query, filters, showResults);
   const poster = (width - 40 - GAP * (COLUMNS - 1)) / COLUMNS;
 
-  // Genre tiles borrow the artwork of the first trending title in that genre
-  const tiles = useMemo(
-    () =>
-      GENRES.map((genre) => ({
-        genre,
-        title: home.trending.find((t) => t.genres.includes(genre)) ?? null,
-      })),
-    [home.trending]
-  );
+  const covers = useGenreCovers();
 
   const tab: Tab = people
     ? 'people'
@@ -145,70 +139,85 @@ export default function Search() {
     return (
       <View className="flex-1">
         {header}
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}>
-          {recents.length ? (
-            <View className="px-gutter pt-6">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-eyebrow font-semibold uppercase text-t3">Recent</Text>
-                <Pressable accessibilityRole="button" scale={0.94} onPress={clearRecents}>
-                  <Text className="text-[13px] font-medium text-t3">Clear</Text>
-                </Pressable>
-              </View>
-              {recents.map((r) => (
-                <Pressable
-                  key={r}
-                  accessibilityRole="button"
-                  scale={0.98}
-                  onPress={() => setQuery(r)}
-                  className="h-12 flex-row items-center gap-3">
-                  <Icon name="clock" size={17} color={colors.t3} />
-                  <Text className="flex-1 text-[16px] text-white">{r}</Text>
-                  <Icon name="arrow" size={16} color={colors.t3} />
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-
-          {home.trending.length ? (
-            <View className="px-gutter pt-7">
-              <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">
-                Trending searches
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {home.trending.slice(0, 8).map((t) => (
-                  <Chip key={t.id} label={t.name} onPress={() => setQuery(t.name)} />
+        <View className="flex-1">
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}>
+            {recents.length ? (
+              <View className="px-gutter pt-6">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-eyebrow font-semibold uppercase text-t3">Recent</Text>
+                  <Pressable accessibilityRole="button" scale={0.94} onPress={clearRecents}>
+                    <Text className="text-[13px] font-medium text-t3">Clear</Text>
+                  </Pressable>
+                </View>
+                {recents.map((r) => (
+                  <Pressable
+                    key={r}
+                    accessibilityRole="button"
+                    scale={0.98}
+                    onPress={() => setQuery(r)}
+                    className="h-12 flex-row items-center gap-3">
+                    <Icon name="clock" size={17} color={colors.t3} />
+                    <Text className="flex-1 text-[16px] text-white">{r}</Text>
+                    <Icon name="arrow" size={16} color={colors.t3} />
+                  </Pressable>
                 ))}
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          <View className="px-gutter pt-7">
-            <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">Browse</Text>
-            <View className="flex-row flex-wrap gap-3">
-              {tiles.map((b, i) => {
-                const tile = (width - 40 - 12) / 2;
-                const art = b.title ?? { name: b.genre, posterPath: null };
-                return (
-                  <Reveal key={b.genre} index={Math.min(i, 6)}>
-                    <Pressable
-                      accessibilityRole="button"
-                      scale={0.96}
-                      onPress={() => setFilters({ ...NO_FILTERS, genres: [b.genre] })}>
-                      <PosterArt title={art} width={tile} height={92} radius={18} size="w500" />
-                      <View className="absolute inset-0 justify-end rounded-[18px] bg-black/45 p-3">
-                        <Text className="text-base font-bold text-white">{b.genre}</Text>
-                      </View>
-                    </Pressable>
-                  </Reveal>
-                );
-              })}
+            {home.trending.length ? (
+              <View className="px-gutter pt-7">
+                <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">
+                  Trending searches
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {home.trending.slice(0, 8).map((t) => (
+                    <Chip key={t.id} label={t.name} onPress={() => setQuery(t.name)} />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            <View className="px-gutter pt-7">
+              <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">Browse</Text>
+              <View className="flex-row flex-wrap gap-3">
+                {GENRES.map((genre, i) => {
+                  const tile = (width - 40 - 12) / 2;
+                  const uri = imageUrl(covers[genre], 'w780');
+                  return (
+                    <Reveal key={genre} index={Math.min(i, 6)}>
+                      <Pressable
+                        accessibilityRole="button"
+                        scale={0.96}
+                        onPress={() => setFilters({ ...NO_FILTERS, genres: [genre] })}
+                        className="overflow-hidden rounded-[18px] border border-white/10 bg-s1"
+                        style={{ width: tile, height: 92 }}>
+                        {uri ? (
+                          <Image
+                            source={{ uri }}
+                            resizeMode="cover"
+                            style={{ position: 'absolute', width: '100%', height: '100%' }}
+                          />
+                        ) : null}
+                        <View className="absolute inset-0 justify-end bg-black/45 p-3">
+                          <Text className="text-base font-bold text-white">{genre}</Text>
+                        </View>
+                      </Pressable>
+                    </Reveal>
+                  );
+                })}
+              </View>
             </View>
+            <View className="h-10" />
+          </ScrollView>
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 24 }}>
+            <Fade from="top" hold={0.1} />
           </View>
-          <View className="h-10" />
-        </ScrollView>
+        </View>
         <FilterSheet
           visible={filtersOpen}
           onClose={() => setFiltersOpen(false)}
@@ -331,7 +340,7 @@ export default function Search() {
           {/* Soft edge so posters fade out under the search field instead of being cut */}
           <View
             pointerEvents="none"
-            style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 18 }}>
+            style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 24 }}>
             <Fade from="top" hold={0.1} />
           </View>
         </View>
