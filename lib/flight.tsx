@@ -48,28 +48,29 @@ interface FlightContextValue {
   close: (titleId: string, scrollOffset?: number) => void;
   /** True while the detail hero should stay hidden under the flying artwork */
   flying: boolean;
-  /** True from the moment close() is called until the screen is gone */
-  closing: boolean;
+  /** Id of the title being closed, from close() until its screen is gone */
+  closingId: string | null;
 }
 
 const FlightContext = createContext<FlightContextValue>({
   open: () => {},
   close: () => {},
   flying: false,
-  closing: false,
+  closingId: null,
 });
 
 export const useOpenTitle = () => useContext(FlightContext).open;
 export const useCloseTitle = () => useContext(FlightContext).close;
 export const useFlying = () => useContext(FlightContext).flying;
-export const useClosing = () => useContext(FlightContext).closing;
+/** True only for the detail that is being closed, so a detail stacked underneath stays put */
+export const useClosing = (id: string) => useContext(FlightContext).closingId === id;
 
 export function FlightProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [flight, setFlight] = useState<Flight | null>(null);
   const [landed, setLanded] = useState(false);
-  const [closing, setClosing] = useState(false);
+  const [closingId, setClosingId] = useState<string | null>(null);
   /** One entry per open detail screen, so each close flies back to its own card */
   const origins = useRef<(Flight | null)[]>([]);
 
@@ -100,7 +101,7 @@ export function FlightProvider({ children }: { children: ReactNode }) {
       const o = origins.current.pop() ?? null;
       const offset = Math.max(0, scrollOffset);
       const canFly = !!o && o.title.id === titleId && offset < heroHeightFor(width) * 0.8;
-      setClosing(true);
+      setClosingId(titleId);
       if (canFly) {
         setLanded(true);
         setFlight({ ...o, reverse: true, offsetY: -offset });
@@ -109,7 +110,7 @@ export function FlightProvider({ children }: { children: ReactNode }) {
       setTimeout(
         () => {
           router.back();
-          setClosing(false);
+          setClosingId(null);
         },
         canFly ? DURATION : 220
       );
@@ -125,8 +126,8 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   }, [flight]);
 
   const value = useMemo(
-    () => ({ open, close, flying: !!flight && !flight.reverse && !landed, closing }),
-    [open, close, flight, landed, closing]
+    () => ({ open, close, flying: !!flight && !flight.reverse && !landed, closingId }),
+    [open, close, flight, landed, closingId]
   );
 
   return (
