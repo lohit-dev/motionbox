@@ -33,6 +33,7 @@ function innertube(): Promise<Innertube> {
       )
       .catch((error) => {
         client = null;
+        console.warn('[trailer] could not start youtubei.js:', error);
         throw error;
       });
   }
@@ -40,7 +41,7 @@ function innertube(): Promise<Innertube> {
 }
 
 /** getBasicInfo takes the client name either as an option or as a plain argument, by version. */
-async function basicInfo(yt: Innertube, id: string, name: 'IOS' | 'WEB') {
+async function basicInfo(yt: Innertube, id: string, name: string) {
   try {
     const info = await yt.getBasicInfo(id, { client: name });
     if (info?.streaming_data) return info;
@@ -48,22 +49,41 @@ async function basicInfo(yt: Innertube, id: string, name: 'IOS' | 'WEB') {
   return yt.getBasicInfo(id, name);
 }
 
-async function resolve(id: string): Promise<Stream> {
-  const yt = await innertube();
+/**
+ * Clients to try, best first. YouTube treats each one differently and blocks different ones from
+ * time to time, so a single failure is expected and the next client usually works.
+ */
+const CLIENTS = ['IOS', 'TV', 'ANDROID', 'WEB'];
 
-  // The iOS client returns an HLS manifest with video and audio together and no cipher to solve
-  try {
-    const info = await basicInfo(yt, id, 'IOS');
-    const hls: string | undefined = info?.streaming_data?.hls_manifest_url;
-    if (hls) return { uri: hls, hls: true };
-  } catch {}
-
-  // Otherwise the best muxed mp4 (usually 360p or 720p), which holds both tracks in one file
-  const info = await basicInfo(yt, id, 'WEB');
+async function fromClient(yt: Innertube, id: string, name: string): Promise<Stream> {
+  const info = await basicInfo(yt, id, name);
+  const status = info?.playability_status;
+  if (status && status.status !== 'OK') {
+    throw new Error(`${status.status}${status.reason ? `: ${status.reason}` : ''}`);
+  }
+  // HLS carries video and audio together, adaptive, usually up to 1080p
+  const hls: string | undefined = info?.streaming_data?.hls_manifest_url;
+  if (hls) return { uri: hls, hls: true };
+  // Otherwise the best single file holding both tracks (usually 360p or 720p)
   const format = info.chooseFormat({ type: 'video+audio', quality: 'best' });
   const uri: string | undefined = format?.url ?? (await format?.decipher(yt.session.player));
-  if (!uri) throw new Error('No playable stream');
+  if (!uri) throw new Error('No playable format');
   return { uri, hls: false };
+}
+
+async function resolve(id: string): Promise<Stream> {
+  const yt = await innertube();
+  const problems: string[] = [];
+  for (const name of CLIENTS) {
+    try {
+      return await fromClient(yt, id, name);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      problems.push(`${name}: ${message}`);
+      console.warn(`[trailer] ${name} client failed for ${id}: ${message}`);
+    }
+  }
+  throw new Error(problems.join(' | '));
 }
 
 export async function resolveStream(id: string): Promise<Stream> {

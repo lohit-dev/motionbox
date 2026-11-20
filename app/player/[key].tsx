@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleButton } from '@/components/ui/CircleButton';
@@ -24,7 +24,7 @@ export default function Player() {
     setState({ phase: 'loading' });
     resolveStream(key)
       .then((stream) => live && setState({ phase: 'ready', uri: stream.uri }))
-      .catch(() => live && setState({ phase: 'failed' }));
+      .catch((e) => live && setState({ phase: 'failed', reason: String(e?.message ?? e) }));
     return () => {
       live = false;
     };
@@ -37,7 +37,8 @@ export default function Player() {
   // A stream that resolves but won't decode still ends up on the fallback screen
   useEffect(() => {
     const sub = player.addListener('statusChange', ({ status }) => {
-      if (status === 'error') setState({ phase: 'failed' });
+      if (status === 'error')
+        setState({ phase: 'failed', reason: 'The player could not decode the stream' });
     });
     return () => sub.remove();
   }, [player]);
@@ -65,13 +66,16 @@ export default function Player() {
           <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
             The trailer didn't load in the app. You can try again or watch it on YouTube.
           </Text>
+          {__DEV__ && state.reason ? (
+            <Text className="mt-3 text-center text-[11px] leading-4 text-t3">{state.reason}</Text>
+          ) : null}
           <View className="mt-6 flex-row gap-3">
             <Pill title="Try again" tone="ghost" onPress={() => setAttempt((n) => n + 1)} />
             <Pill title="Open YouTube" icon="play" onPress={() => openOnYouTube(key)} />
           </View>
         </View>
       )}
-      <View className="absolute right-5" style={{ top: Platform.OS === 'ios' ? 16 : top + 8 }}>
+      <View className="absolute right-5" style={{ top: top + 8 }}>
         <CircleButton icon="close" label="Close" size={40} tone="glass" onPress={close} />
       </View>
     </View>
