@@ -1,4 +1,4 @@
-import { TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 
 import colors from '@/constants/colors';
 import { Icon } from '@/components/ui/Icon';
@@ -8,6 +8,9 @@ interface SearchFieldProps {
   value: string;
   onChangeText: (text: string) => void;
   onFilterPress?: () => void;
+  onSubmit?: () => void;
+  /** Number of active filters, shown as a badge on the filter button */
+  badge?: number;
   placeholder?: string;
 }
 
@@ -15,6 +18,8 @@ export function SearchField({
   value,
   onChangeText,
   onFilterPress,
+  onSubmit,
+  badge = 0,
   placeholder = 'Movies, series, people',
 }: SearchFieldProps) {
   return (
@@ -27,6 +32,7 @@ export function SearchField({
           placeholder={placeholder}
           placeholderTextColor={colors.t3}
           returnKeyType="search"
+          onSubmitEditing={onSubmit}
           autoCorrect={false}
           selectionColor={colors.white}
           className="flex-1 text-base text-white"
@@ -48,6 +54,11 @@ export function SearchField({
           scale={0.92}
           className="size-12 items-center justify-center rounded-full bg-s1">
           <Icon name="filter" size={20} />
+          {badge ? (
+            <View className="absolute -right-0.5 -top-0.5 h-5 w-5 items-center justify-center rounded-full bg-white">
+              <Text className="text-[11px] font-bold text-ink">{badge}</Text>
+            </View>
+          ) : null}
         </Pressable>
       ) : null}
     </View>

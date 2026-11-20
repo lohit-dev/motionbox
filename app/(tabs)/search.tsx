@@ -1,180 +1,192 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
+import colors from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
+import { Fade } from '@/components/Fade';
+import { FilterSheet } from '@/components/FilterSheet';
+import { NeedsKey } from '@/components/NeedsKey';
 import { Poster } from '@/components/Poster';
 import { PosterArt } from '@/components/PosterArt';
 import { Reveal } from '@/components/Reveal';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SearchField } from '@/components/SearchField';
-import { Sheet } from '@/components/Sheet';
+import { Skeleton } from '@/components/Skeleton';
+import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { Chip } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
-import { browseTiles, genres, recentSearches, trendingSearches } from '@/data/extras';
-import { people } from '@/data/people';
-import { getTitle, titles } from '@/data/titles';
-import { useSearchTitles } from '@/hooks/useSearchTitles';
-import { kindLine } from '@/lib/format';
+import { useHome } from '@/hooks/useHome';
+import { useSearch } from '@/hooks/useSearch';
+import { GENRES, hasTmdb } from '@/lib/api';
 import { useOpenTitle } from '@/lib/flight';
-import type { Title, TitleKind } from '@/types';
+import { useApp } from '@/store/store';
+import { NO_FILTERS, type Filters, type Title } from '@/types';
 
-interface Filters {
-  kind: TitleKind | 'all';
-  genre: string | null;
-  minScore: number;
-}
+type Tab = 'all' | 'movie' | 'series' | 'people';
 
-const NO_FILTERS: Filters = { kind: 'all', genre: null, minScore: 0 };
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'series', label: 'Series' },
+  { value: 'people', label: 'People' },
+];
 
 const activeCount = (f: Filters) =>
-  (f.kind !== 'all' ? 1 : 0) + (f.genre ? 1 : 0) + (f.minScore ? 1 : 0);
+  f.genres.length + (f.minScore ? 1 : 0) + (f.kind !== 'all' ? 1 : 0) + (f.sort !== 'popular' ? 1 : 0);
+
+const COLUMNS = 3;
+const GAP = 12;
 
 export default function Search() {
   const router = useRouter();
   const open = useOpenTitle();
   const { width } = useWindowDimensions();
+  const recents = useApp((s) => s.recentSearches);
+  const addRecent = useApp((s) => s.addRecent);
+  const clearRecents = useApp((s) => s.clearRecents);
+  const home = useHome();
+
   const [query, setQuery] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [recents, setRecents] = useState(recentSearches);
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [people, setPeople] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const q = query.trim().toLowerCase();
+  const text = query.trim();
   const filtering = activeCount(filters) > 0;
-  const mode: 'idle' | 'typing' | 'results' =
-    submitted || filtering ? 'results' : q ? 'typing' : 'idle';
+  const showResults = text.length >= 2 || filtering;
+  const search = useSearch(query, filters, showResults);
+  const poster = (width - 40 - GAP * (COLUMNS - 1)) / COLUMNS;
 
-  const remote = useSearchTitles(query, filters.genre);
-  const matches = useMemo(() => {
-    const pass = (t: Title) =>
-      (filters.kind === 'all' || t.kind === filters.kind) && t.score >= filters.minScore;
-    // Live TMDB results when a token is set, otherwise the bundled titles
-    if (remote.results) {
-      return remote.results.filter(
-        (t) => pass(t) && (!filters.genre || !q || t.genres.includes(filters.genre))
-      );
-    }
-    return titles.filter(
-      (t) =>
-        (!q ||
-          t.name.toLowerCase().includes(q) ||
-          t.genres.some((g) => g.toLowerCase().includes(q)) ||
-          t.cast.some((c) => c.name.toLowerCase().includes(q))) &&
-        (!filters.genre || t.genres.includes(filters.genre)) &&
-        pass(t)
-    );
-  }, [q, filters, remote.results]);
-  const peopleMatches = useMemo(
-    () => (q ? people.filter((p) => p.name.toLowerCase().includes(q)) : []),
-    [q]
+  // Genre tiles borrow the artwork of the first trending title in that genre
+  const tiles = useMemo(
+    () =>
+      GENRES.map((genre) => ({
+        genre,
+        title: home.trending.find((t) => t.genres.includes(genre)) ?? null,
+      })),
+    [home.trending]
   );
 
-  const run = (text: string) => {
-    setQuery(text);
-    setSubmitted(true);
-    if (text.trim())
-      setRecents((r) => [text.trim(), ...r.filter((x) => x !== text.trim())].slice(0, 5));
+  const tab: Tab = people ? 'people' : filters.kind === 'movie' ? 'movie' : filters.kind === 'series' ? 'series' : 'all';
+  const pickTab = (next: Tab) => {
+    setPeople(next === 'people');
+    if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
   };
-  const change = (text: string) => {
-    setQuery(text);
-    setSubmitted(false);
-  };
-  const tile = (width - 40 - 12) / 2;
 
-  return (
-    <View className="flex-1">
+  if (!hasTmdb()) {
+    return (
+      <View className="flex-1">
+        <ScreenHeader title="Search" />
+        <NeedsKey />
+      </View>
+    );
+  }
+
+  const header = (
+    <>
       <ScreenHeader title="Search" />
-      <SearchField value={query} onChangeText={change} onFilterPress={() => setFiltersOpen(true)} />
-      {filtering ? (
+      <SearchField
+        value={query}
+        onChangeText={setQuery}
+        onSubmit={() => addRecent(query)}
+        onFilterPress={() => setFiltersOpen(true)}
+        badge={activeCount(filters)}
+      />
+      {filters.genres.length ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           className="mt-3 flex-grow-0"
           contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-          {filters.kind !== 'all' ? (
+          {filters.genres.map((g) => (
             <Chip
+              key={g}
               selected
-              label={filters.kind === 'movie' ? 'Movies' : 'Series'}
+              label={g}
               trailingIcon="close"
-              onPress={() => setFilters({ ...filters, kind: 'all' })}
+              onPress={() => setFilters({ ...filters, genres: filters.genres.filter((x) => x !== g) })}
             />
-          ) : null}
-          {filters.genre ? (
-            <Chip
-              selected
-              label={filters.genre}
-              trailingIcon="close"
-              onPress={() => setFilters({ ...filters, genre: null })}
-            />
-          ) : null}
+          ))}
           {filters.minScore ? (
             <Chip
               selected
-              label={`${filters.minScore}+ rating`}
+              label={`Score ${filters.minScore.toFixed(1)}+`}
               trailingIcon="close"
               onPress={() => setFilters({ ...filters, minScore: 0 })}
             />
           ) : null}
         </ScrollView>
       ) : null}
+    </>
+  );
 
-      {mode === 'idle' ? (
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+  if (!showResults) {
+    return (
+      <View className="flex-1">
+        {header}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}>
           {recents.length ? (
             <View className="px-gutter pt-6">
               <View className="flex-row items-center justify-between">
                 <Text className="text-eyebrow font-semibold uppercase text-t3">Recent</Text>
-                <Pressable onPress={() => setRecents([])} scale={0.94}>
-                  <Text className="text-[13px] text-t3">Clear</Text>
+                <Pressable accessibilityRole="button" scale={0.94} onPress={clearRecents}>
+                  <Text className="text-[13px] font-medium text-t3">Clear</Text>
                 </Pressable>
               </View>
-              {recents.map((r, i) => (
-                <Reveal key={r} index={i}>
-                  <Pressable
-                    onPress={() => run(r)}
-                    scale={0.98}
-                    className="h-12 flex-row items-center gap-3">
-                    <Icon name="clock" size={16} color="rgba(255,255,255,0.54)" />
-                    <Text className="flex-1 text-base text-white">{r}</Text>
-                    <Icon name="arrow" size={16} color="rgba(255,255,255,0.54)" />
-                  </Pressable>
-                </Reveal>
+              {recents.map((r) => (
+                <Pressable
+                  key={r}
+                  accessibilityRole="button"
+                  scale={0.98}
+                  onPress={() => setQuery(r)}
+                  className="h-12 flex-row items-center gap-3">
+                  <Icon name="clock" size={17} color={colors.t3} />
+                  <Text className="flex-1 text-[16px] text-white">{r}</Text>
+                  <Icon name="arrow" size={16} color={colors.t3} />
+                </Pressable>
               ))}
             </View>
           ) : null}
 
-          <View className="px-gutter pt-6">
-            <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">
-              Trending searches
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {trendingSearches.map((t) => (
-                <Chip key={t} label={t} onPress={() => run(t)} />
-              ))}
+          {home.trending.length ? (
+            <View className="px-gutter pt-7">
+              <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">
+                Trending searches
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {home.trending.slice(0, 8).map((t) => (
+                  <Chip key={t.id} label={t.name} onPress={() => setQuery(t.name)} />
+                ))}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           <View className="px-gutter pt-7">
             <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">Browse</Text>
             <View className="flex-row flex-wrap gap-3">
-              {browseTiles.map((b, i) => {
-                const t = getTitle(b.id);
-                if (!t) return null;
+              {tiles.map((b, i) => {
+                const tile = (width - 40 - 12) / 2;
+                const art = b.title ?? { name: b.genre, posterPath: null };
                 return (
-                  <Reveal key={b.genre} index={i}>
+                  <Reveal key={b.genre} index={Math.min(i, 6)}>
                     <Pressable
                       accessibilityRole="button"
                       scale={0.96}
-                      onPress={() => {
-                        setQuery('');
-                        setSubmitted(true);
-                        setFilters({ ...NO_FILTERS, genre: b.genre });
-                      }}>
-                      <PosterArt title={t} width={tile} height={92} radius={18} />
+                      onPress={() => setFilters({ ...NO_FILTERS, genres: [b.genre] })}>
+                      <PosterArt title={art} width={tile} height={92} radius={18} size="w500" />
                       <View className="absolute inset-0 justify-end rounded-[18px] bg-black/45 p-3">
                         <Text className="text-base font-bold text-white">{b.genre}</Text>
                       </View>
@@ -186,148 +198,142 @@ export default function Search() {
           </View>
           <View className="h-10" />
         </ScrollView>
-      ) : null}
+        <FilterSheet
+          visible={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          filters={filters}
+          onChange={setFilters}
+          count={null}
+          loading={false}
+        />
+      </View>
+    );
+  }
 
-      {mode === 'typing' ? (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 20 }}>
-          <Pressable
-            onPress={() => run(query)}
-            scale={0.98}
-            className="h-12 flex-row items-center gap-3">
-            <Icon name="search" size={18} color="rgba(255,255,255,0.54)" />
-            <Text className="flex-1 text-base text-white">Search for “{query}”</Text>
-          </Pressable>
-          {matches.map((t) => (
-            <Pressable
-              key={t.id}
-              onPress={() => open(t)}
-              scale={0.98}
-              className="h-[82px] flex-row items-center gap-3">
-              <PosterArt title={t} width={44} height={66} radius={10} size="w342" />
-              <View className="flex-1">
-                <Text numberOfLines={1} className="text-base font-semibold text-white">
-                  {t.name}
-                </Text>
-                <Text className="mt-0.5 text-[12.5px] text-t3">{kindLine(t)}</Text>
-              </View>
-            </Pressable>
-          ))}
-          {peopleMatches.map((p) => (
-            <Pressable
-              key={p.name}
-              onPress={() => router.push({ pathname: '/person/[name]', params: { name: p.name } })}
-              scale={0.98}
-              className="flex-row items-center gap-3 py-2">
-              <Avatar name={p.name} size={44} />
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-white">{p.name}</Text>
-                <Text className="mt-0.5 text-[12.5px] text-t3">{p.line}</Text>
-              </View>
-            </Pressable>
-          ))}
-          {!matches.length && !peopleMatches.length ? (
-            <EmptyState
-              title="No matches"
-              body={`Nothing for “${query}”. Check the spelling or try a genre.`}
-            />
-          ) : null}
-        </ScrollView>
-      ) : null}
-
-      {mode === 'results' ? (
+  const results = (
+    <>
+      <View className="mt-4">
+        <UnderlineTabs tabs={TABS} value={tab} onChange={pickTab} />
+      </View>
+      {search.failed ? (
+        <EmptyState
+          title="Couldn't load results"
+          body="Check your connection and try again."
+          action="Retry"
+          onAction={search.retry}
+        />
+      ) : tab === 'people' ? (
         <FlatList
-          data={matches}
-          numColumns={3}
+          data={search.people}
           keyboardShouldPersistTaps="handled"
-          keyExtractor={(t) => t.id}
-          contentContainerStyle={{ padding: 20, gap: 12 }}
-          columnWrapperStyle={{ gap: 12 }}
-          ListHeaderComponent={
-            <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
-              {matches.length} {matches.length === 1 ? 'result' : 'results'}
-            </Text>
-          }
+          keyExtractor={(p) => String(p.id)}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingVertical: 8 }}
+          onEndReached={search.loadMore}
+          onEndReachedThreshold={0.6}
           ListEmptyComponent={
-            <EmptyState
-              title="No matches"
-              body="Try removing a filter."
-              action="Clear filters"
-              onAction={() => {
-                setFilters(NO_FILTERS);
-                setSubmitted(false);
-              }}
-            />
+            search.loading ? null : (
+              <EmptyState
+                title="No people found"
+                body={text ? `Nothing for “${text}”.` : 'Type a name to look for actors and directors.'}
+              />
+            )
           }
-          renderItem={({ item, index }: { item: Title; index: number }) => (
-            <Reveal index={index} style={{ flex: 1 / 3 }}>
-              <Poster title={item} width={106} showScore onPress={open} />
-            </Reveal>
+          renderItem={({ item }) => (
+            <Pressable
+              accessibilityRole="button"
+              scale={0.98}
+              onPress={() => router.push({ pathname: '/person/[id]', params: { id: String(item.id) } })}
+              className="flex-row items-center gap-3 px-gutter py-2.5">
+              <Avatar name={item.name} size={52} photoPath={item.photoPath} />
+              <View className="flex-1">
+                <Text className="text-[16px] font-semibold text-white">{item.name}</Text>
+                {item.department ? (
+                  <Text className="text-[13px] text-t3">{item.department}</Text>
+                ) : null}
+              </View>
+              <Icon name="chevronRight" size={16} color={colors.t3} />
+            </Pressable>
           )}
         />
-      ) : null}
+      ) : (
+        <View className="flex-1">
+          <FlatList
+            data={search.titles}
+            numColumns={COLUMNS}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            keyExtractor={(t) => t.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: 20, gap: GAP }}
+            columnWrapperStyle={{ gap: GAP }}
+            onEndReached={search.loadMore}
+            onEndReachedThreshold={0.6}
+            ListHeaderComponent={
+              search.total && !search.loading ? (
+                <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
+                  {search.total.toLocaleString()} {search.total === 1 ? 'result' : 'results'}
+                </Text>
+              ) : null
+            }
+            ListEmptyComponent={
+              search.loading ? (
+                <View className="flex-row" style={{ gap: GAP }}>
+                  {[0, 1, 2].map((i) => (
+                    <Skeleton key={i} width={poster} height={poster * 1.5} radius={14} />
+                  ))}
+                </View>
+              ) : (
+                <EmptyState
+                  title="No matches"
+                  body="Try a different search or remove a filter."
+                  action={filtering ? 'Clear filters' : undefined}
+                  onAction={() => setFilters(NO_FILTERS)}
+                />
+              )
+            }
+            ListFooterComponent={
+              search.loadingMore ? (
+                <View className="items-center py-6">
+                  <ActivityIndicator color={colors.t2} />
+                </View>
+              ) : null
+            }
+            renderItem={({ item, index }: { item: Title; index: number }) => (
+              <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
+                <Poster
+                  title={item}
+                  width={poster}
+                  showScore
+                  onPress={(t, art) => {
+                    addRecent(text);
+                    open(t, art);
+                  }}
+                />
+              </Reveal>
+            )}
+          />
+          {/* Soft edge so posters fade out under the search field instead of being cut */}
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 18 }}>
+            <Fade from="top" hold={0.1} />
+          </View>
+        </View>
+      )}
+    </>
+  );
 
-      <Sheet
+  return (
+    <View className="flex-1">
+      {header}
+      {results}
+      <FilterSheet
         visible={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        title="Filters"
-        height={520}>
-        <ScrollView className="px-gutter" showsVerticalScrollIndicator={false}>
-          <Text className="mb-3 mt-2 text-eyebrow font-semibold uppercase text-t3">Type</Text>
-          <View className="flex-row gap-2">
-            {(['all', 'movie', 'series'] as const).map((k) => (
-              <Chip
-                key={k}
-                label={k === 'all' ? 'All' : k === 'movie' ? 'Movies' : 'Series'}
-                selected={filters.kind === k}
-                onPress={() => setFilters({ ...filters, kind: k })}
-              />
-            ))}
-          </View>
-          <Text className="mb-3 mt-6 text-eyebrow font-semibold uppercase text-t3">Genre</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {genres.map((g) => (
-              <Chip
-                key={g}
-                label={g}
-                selected={filters.genre === g}
-                onPress={() => setFilters({ ...filters, genre: filters.genre === g ? null : g })}
-              />
-            ))}
-          </View>
-          <Text className="mb-3 mt-6 text-eyebrow font-semibold uppercase text-t3">
-            Minimum rating
-          </Text>
-          <View className="flex-row gap-2">
-            {[0, 6, 7, 8].map((n) => (
-              <Chip
-                key={n}
-                label={n ? `${n}+` : 'Any'}
-                selected={filters.minScore === n}
-                onPress={() => setFilters({ ...filters, minScore: n })}
-              />
-            ))}
-          </View>
-          <View className="mb-6 mt-8 flex-row gap-3">
-            <Pill
-              title="Reset"
-              tone="ghost"
-              className="flex-1"
-              onPress={() => setFilters(NO_FILTERS)}
-            />
-            <Pill
-              title={`Show ${matches.length}`}
-              className="flex-1"
-              onPress={() => {
-                setSubmitted(true);
-                setFiltersOpen(false);
-              }}
-            />
-          </View>
-        </ScrollView>
-      </Sheet>
+        filters={filters}
+        onChange={setFilters}
+        count={search.total || null}
+        loading={search.loading}
+      />
     </View>
   );
 }
