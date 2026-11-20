@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -94,6 +94,14 @@ export default function Search() {
       </View>
     );
   }
+
+  const openResult = useCallback(
+    (t: Title, art: View | null) => {
+      addRecent(text);
+      open(t, art);
+    },
+    [addRecent, open, text]
+  );
 
   const header = (
     <>
@@ -323,19 +331,22 @@ export default function Search() {
                 </View>
               ) : null
             }
-            renderItem={({ item, index }: { item: Title; index: number }) => (
-              <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
-                <Poster
-                  title={item}
-                  width={poster}
-                  showScore
-                  onPress={(t, art) => {
-                    addRecent(text);
-                    open(t, art);
-                  }}
-                />
-              </Reveal>
-            )}
+            initialNumToRender={12}
+            maxToRenderPerBatch={9}
+            windowSize={7}
+            removeClippedSubviews
+            renderItem={({ item, index }: { item: Title; index: number }) => {
+              const card = <Poster title={item} width={poster} showScore onPress={openResult} />;
+              // Only the first screenful animates in. Entrance animations on every page of an
+              // endless list would cost frames while scrolling.
+              return index < 12 ? (
+                <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
+                  {card}
+                </Reveal>
+              ) : (
+                <View style={{ flex: 1 / COLUMNS }}>{card}</View>
+              );
+            }}
           />
           {/* Soft edge so posters fade out under the search field instead of being cut */}
           <View
