@@ -1,3 +1,5 @@
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -25,6 +27,7 @@ import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { Chip } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
+import { useSwipe } from '@/hooks/useSwipe';
 import { useGenreCovers } from '@/hooks/useGenreCovers';
 import { useHome } from '@/hooks/useHome';
 import { useSearch } from '@/hooks/useSearch';
@@ -86,6 +89,11 @@ export default function Search() {
     setPeople(next === 'people');
     if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
   };
+  // Swipe sideways over the results to move between All, Movies, Series and People
+  const swipe = useSwipe((direction) => {
+    const next = TABS[TABS.findIndex((t) => t.value === tab) + direction];
+    if (next) pickTab(next.value);
+  });
 
   // Read through a ref: depending on `text` would hand every poster a new callback on each
   // keystroke and re-render the whole grid
@@ -267,119 +275,127 @@ export default function Search() {
       <View className="mt-4">
         <UnderlineTabs tabs={TABS} value={tab} onChange={pickTab} />
       </View>
-      {search.failed ? (
-        <EmptyState
-          title="Couldn't load results"
-          body="Check your connection and try again."
-          action="Retry"
-          onAction={search.retry}
-        />
-      ) : tab === 'people' ? (
-        <FlatList
-          data={search.people}
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(p) => String(p.id)}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 8 }}
-          onEndReached={search.loadMore}
-          onEndReachedThreshold={0.6}
-          ListEmptyComponent={
-            search.loading ? undefined : (
-              <EmptyState
-                title="No people found"
-                body={
-                  text ? `Nothing for “${text}”.` : 'Type a name to look for actors and directors.'
-                }
-              />
-            )
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              accessibilityRole="button"
-              scale={0.98}
-              onPress={() =>
-                router.push({ pathname: '/person/[id]', params: { id: String(item.id) } })
+      <GestureDetector gesture={swipe.gesture}>
+        <Animated.View style={[{ flex: 1 }, swipe.style]}>
+          {search.failed ? (
+            <EmptyState
+              title="Couldn't load results"
+              body="Check your connection and try again."
+              action="Retry"
+              onAction={search.retry}
+            />
+          ) : tab === 'people' ? (
+            <FlatList
+              data={search.people}
+              keyboardShouldPersistTaps="handled"
+              keyExtractor={(p) => String(p.id)}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 8 }}
+              onEndReached={search.loadMore}
+              onEndReachedThreshold={0.6}
+              ListEmptyComponent={
+                search.loading ? undefined : (
+                  <EmptyState
+                    title="No people found"
+                    body={
+                      text
+                        ? `Nothing for “${text}”.`
+                        : 'Type a name to look for actors and directors.'
+                    }
+                  />
+                )
               }
-              className="flex-row items-center gap-3 px-gutter py-2.5">
-              <Avatar name={item.name} size={52} photoPath={item.photoPath} />
-              <View className="flex-1">
-                <Text className="text-[16px] font-semibold text-white">{item.name}</Text>
-                {item.department ? (
-                  <Text className="text-[13px] text-t3">{item.department}</Text>
-                ) : null}
+              renderItem={({ item }) => (
+                <Pressable
+                  accessibilityRole="button"
+                  scale={0.98}
+                  onPress={() =>
+                    router.push({ pathname: '/person/[id]', params: { id: String(item.id) } })
+                  }
+                  className="flex-row items-center gap-3 px-gutter py-2.5">
+                  <Avatar name={item.name} size={52} photoPath={item.photoPath} />
+                  <View className="flex-1">
+                    <Text className="text-[16px] font-semibold text-white">{item.name}</Text>
+                    {item.department ? (
+                      <Text className="text-[13px] text-t3">{item.department}</Text>
+                    ) : null}
+                  </View>
+                  <Icon name="chevronRight" size={16} color={colors.t3} />
+                </Pressable>
+              )}
+            />
+          ) : (
+            <View className="flex-1">
+              <FlatList
+                data={search.titles}
+                numColumns={COLUMNS}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                keyExtractor={(t) => t.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ padding: 20, gap: GAP }}
+                columnWrapperStyle={{ gap: GAP }}
+                onEndReached={search.loadMore}
+                onEndReachedThreshold={0.6}
+                ListHeaderComponent={
+                  search.total && !search.loading ? (
+                    <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
+                      {search.total.toLocaleString()} {search.total === 1 ? 'result' : 'results'}
+                    </Text>
+                  ) : undefined
+                }
+                ListEmptyComponent={
+                  search.loading ? (
+                    <View className="flex-row" style={{ gap: GAP }}>
+                      {[0, 1, 2].map((i) => (
+                        <Skeleton key={i} width={poster} height={poster * 1.5} radius={14} />
+                      ))}
+                    </View>
+                  ) : (
+                    <EmptyState
+                      title="No matches"
+                      body="Try a different search or remove a filter."
+                      action={filtering ? 'Clear filters' : undefined}
+                      onAction={() => setFilters(NO_FILTERS)}
+                    />
+                  )
+                }
+                ListFooterComponent={
+                  search.loadingMore ? (
+                    <View className="items-center py-6">
+                      <ActivityIndicator color={colors.t2} />
+                    </View>
+                  ) : undefined
+                }
+                initialNumToRender={12}
+                maxToRenderPerBatch={9}
+                windowSize={7}
+                removeClippedSubviews
+                renderItem={({ item, index }: { item: Title; index: number }) => {
+                  const card = (
+                    <Poster title={item} width={poster} showScore onPress={openResult} />
+                  );
+                  // Only the first screenful animates in. Entrance animations on every page of an
+                  // endless list would cost frames while scrolling.
+                  return index < 12 ? (
+                    <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
+                      {card}
+                    </Reveal>
+                  ) : (
+                    <View style={{ flex: 1 / COLUMNS }}>{card}</View>
+                  );
+                }}
+              />
+              {/* Soft edge so posters fade out under the search field instead of being cut */}
+              <View
+                pointerEvents="none"
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 24 }}>
+                <Fade from="top" hold={0.1} />
               </View>
-              <Icon name="chevronRight" size={16} color={colors.t3} />
-            </Pressable>
+            </View>
           )}
-        />
-      ) : (
-        <View className="flex-1">
-          <FlatList
-            data={search.titles}
-            numColumns={COLUMNS}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            keyExtractor={(t) => t.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: 20, gap: GAP }}
-            columnWrapperStyle={{ gap: GAP }}
-            onEndReached={search.loadMore}
-            onEndReachedThreshold={0.6}
-            ListHeaderComponent={
-              search.total && !search.loading ? (
-                <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
-                  {search.total.toLocaleString()} {search.total === 1 ? 'result' : 'results'}
-                </Text>
-              ) : undefined
-            }
-            ListEmptyComponent={
-              search.loading ? (
-                <View className="flex-row" style={{ gap: GAP }}>
-                  {[0, 1, 2].map((i) => (
-                    <Skeleton key={i} width={poster} height={poster * 1.5} radius={14} />
-                  ))}
-                </View>
-              ) : (
-                <EmptyState
-                  title="No matches"
-                  body="Try a different search or remove a filter."
-                  action={filtering ? 'Clear filters' : undefined}
-                  onAction={() => setFilters(NO_FILTERS)}
-                />
-              )
-            }
-            ListFooterComponent={
-              search.loadingMore ? (
-                <View className="items-center py-6">
-                  <ActivityIndicator color={colors.t2} />
-                </View>
-              ) : undefined
-            }
-            initialNumToRender={12}
-            maxToRenderPerBatch={9}
-            windowSize={7}
-            removeClippedSubviews
-            renderItem={({ item, index }: { item: Title; index: number }) => {
-              const card = <Poster title={item} width={poster} showScore onPress={openResult} />;
-              // Only the first screenful animates in. Entrance animations on every page of an
-              // endless list would cost frames while scrolling.
-              return index < 12 ? (
-                <Reveal index={index % 9} style={{ flex: 1 / COLUMNS }}>
-                  {card}
-                </Reveal>
-              ) : (
-                <View style={{ flex: 1 / COLUMNS }}>{card}</View>
-              );
-            }}
-          />
-          {/* Soft edge so posters fade out under the search field instead of being cut */}
-          <View
-            pointerEvents="none"
-            style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 24 }}>
-            <Fade from="top" hold={0.1} />
-          </View>
-        </View>
-      )}
+        </Animated.View>
+      </GestureDetector>
     </>
   );
 

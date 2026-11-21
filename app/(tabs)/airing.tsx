@@ -1,3 +1,5 @@
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -12,6 +14,7 @@ import { WeekStrip } from '@/components/WeekStrip';
 import { useAiringWeek } from '@/hooks/useAiringWeek';
 import { hasTmdb } from '@/lib/api';
 import { currentWeek } from '@/lib/calendar';
+import { useSwipe } from '@/hooks/useSwipe';
 import { useOpenTitle } from '@/lib/flight';
 import { getTitle } from '@/lib/titles';
 import { useApp } from '@/store/store';
@@ -36,6 +39,12 @@ export default function Airing() {
   const { schedule, loading, failed } = useAiringWeek(reload);
   const open = useOpenTitle();
 
+  // Swipe the list sideways to move to the next or previous day
+  const swipe = useSwipe((direction) => {
+    const next = airingDay + direction;
+    if (next >= 0 && next < week.length) setAiringDay(next);
+  });
+
   const rows = (schedule[airingDay] ?? []).filter(
     (e) => airingSegment === 'all' || reminders.includes(e.id) || saved.includes(e.id)
   );
@@ -58,41 +67,45 @@ export default function Airing() {
       <WeekStrip days={week} selected={airingDay} onSelect={setAiringDay} />
 
       {/* key restarts the staggered entrance whenever the day or segment changes */}
-      <View key={`${airingDay}-${airingSegment}`} className="gap-3 px-gutter pt-4">
-        {loading ? (
-          [0, 1, 2, 3].map((i) => <Skeleton key={i} height={112} radius={22} />)
-        ) : failed ? (
-          <OfflineBanner onRetry={() => setReload((n) => n + 1)} />
-        ) : (
-          rows.map((entry, i) => {
-            const title = getTitle(entry.id);
-            if (!title) return null;
-            return (
-              <Reveal key={`${entry.id}-${entry.time}`} index={i}>
-                <AiringCard
-                  entry={entry}
-                  title={title}
-                  reminded={reminders.includes(entry.id)}
-                  onToggleReminder={toggleReminder}
-                  onPress={open}
-                />
-              </Reveal>
-            );
-          })
-        )}
-        {!loading && !failed && rows.length === 0 ? (
-          <View className="mt-16 items-center px-8">
-            <Text className="text-xl font-bold text-white">
-              {airingSegment === 'mine' ? 'Nothing from your list' : 'Nothing airing'}
-            </Text>
-            <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
-              {airingSegment === 'mine'
-                ? 'Save a show or tap the bell on it to see it here.'
-                : 'Check another day.'}
-            </Text>
+      <GestureDetector gesture={swipe.gesture}>
+        <Animated.View style={[{ minHeight: 460 }, swipe.style]}>
+          <View key={`${airingDay}-${airingSegment}`} className="gap-3 px-gutter pt-4">
+            {loading ? (
+              [0, 1, 2, 3].map((i) => <Skeleton key={i} height={112} radius={22} />)
+            ) : failed ? (
+              <OfflineBanner onRetry={() => setReload((n) => n + 1)} />
+            ) : (
+              rows.map((entry, i) => {
+                const title = getTitle(entry.id);
+                if (!title) return null;
+                return (
+                  <Reveal key={`${entry.id}-${entry.time}`} index={i}>
+                    <AiringCard
+                      entry={entry}
+                      title={title}
+                      reminded={reminders.includes(entry.id)}
+                      onToggleReminder={toggleReminder}
+                      onPress={open}
+                    />
+                  </Reveal>
+                );
+              })
+            )}
+            {!loading && !failed && rows.length === 0 ? (
+              <View className="mt-16 items-center px-8">
+                <Text className="text-xl font-bold text-white">
+                  {airingSegment === 'mine' ? 'Nothing from your list' : 'Nothing airing'}
+                </Text>
+                <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
+                  {airingSegment === 'mine'
+                    ? 'Save a show or tap the bell on it to see it here.'
+                    : 'Check another day.'}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-      </View>
+        </Animated.View>
+      </GestureDetector>
       <View className="h-10" />
     </ScrollView>
   );
