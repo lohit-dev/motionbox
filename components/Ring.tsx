@@ -10,6 +10,13 @@ interface RingProps {
   onPress?: (title: Title) => void;
 }
 
+/** Short label: no leading article, nothing after a colon, so rings read The Odyssey as Odyssey */
+const storyLabel = (name: string) =>
+  name
+    .replace(/^(the|a|an)\s+/i, '')
+    .split(/[:\-–]/)[0]
+    .trim() || name;
+
 /** Story ring: white outline while there is something new, grey once seen. */
 export const Ring = memo(function Ring({ title, onPress }: RingProps) {
   const [seen, setSeen] = useState(false);
@@ -30,7 +37,7 @@ export const Ring = memo(function Ring({ title, onPress }: RingProps) {
         <PosterArt title={title} width={60} height={60} radius={30} size="w342" bordered={false} />
       </View>
       <Text numberOfLines={1} className="mt-1.5 text-[11.5px] font-medium text-t2">
-        {title.name.split(' ')[0]}
+        {storyLabel(title.name)}
       </Text>
     </Pressable>
   );

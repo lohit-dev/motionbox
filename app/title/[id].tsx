@@ -35,7 +35,7 @@ import { Pressable } from '@/components/ui/Pressable';
 import { useTitle, useTitles } from '@/hooks/useTitle';
 import { parseId } from '@/lib/api';
 import { closeTitle, heroHeightFor, useOpenTitle } from '@/lib/flight';
-import { genreLine, kindLine } from '@/lib/format';
+import { genreLine, hasScore, kindLine } from '@/lib/format';
 import { ease, springs } from '@/lib/motion';
 import { getTitle } from '@/lib/titles';
 import { openClip, openTrailer } from '@/lib/trailer';
@@ -265,12 +265,14 @@ export default function TitleDetail() {
                   />
                 </View>
                 <View className="mt-3 flex-row items-center gap-3">
-                  <View className="flex-row items-center gap-1">
-                    <Icon name="star" size={13} />
-                    <Text className="text-[13px] font-semibold text-white">
-                      {title.score.toFixed(1)}
-                    </Text>
-                  </View>
+                  {hasScore(title) ? (
+                    <View className="flex-row items-center gap-1">
+                      <Icon name="star" size={13} />
+                      <Text className="text-[13px] font-semibold text-white">
+                        {title.score.toFixed(1)}
+                      </Text>
+                    </View>
+                  ) : null}
                   {title.runtime ? (
                     <Text className="text-[13px] text-t2">{title.runtime}</Text>
                   ) : null}
@@ -437,6 +439,12 @@ export default function TitleDetail() {
               barBg,
             ]}
           />
+          {/* Soft edge under the bar, so content scrolls away instead of being cut off */}
+          <Animated.View
+            pointerEvents="none"
+            style={[{ position: 'absolute', left: 0, right: 0, top: '100%', height: 20 }, barBg]}>
+            <Fade from="top" hold={0.1} />
+          </Animated.View>
           <View className="flex-row items-center justify-between px-gutter pb-2">
             <CircleButton icon="back" label="Back" size={44} tone="glass" onPress={closeTitle} />
             <Animated.Text

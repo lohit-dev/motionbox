@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 import { PosterArt } from '@/components/PosterArt';
-import { kindLine } from '@/lib/format';
+import { hasScore, kindLine } from '@/lib/format';
 import type { Title } from '@/types';
 
 interface PosterProps {
@@ -43,7 +43,7 @@ function PosterBase({
         <Animated.View sharedTransitionTag={sharedTag} style={{ width, height: width * 1.5 }}>
           <PosterArt title={title} width={width} height={width * 1.5} />
         </Animated.View>
-        {showScore ? (
+        {showScore && hasScore(title) ? (
           <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-full bg-black/65 px-2 py-1">
             <Icon name="star" size={10} />
             <Text className="text-[11px] font-semibold text-white">{title.score.toFixed(1)}</Text>

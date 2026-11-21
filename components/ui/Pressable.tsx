@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable as RNPressable, type PressableProps } from 'react-native';
 
 interface Props extends Omit<PressableProps, 'style'> {
@@ -9,14 +10,25 @@ interface Props extends Omit<PressableProps, 'style'> {
 
 /**
  * Pressable that shrinks slightly under the finger.
- * className goes straight to the core Pressable so NativeWind always resolves it. The pressed
- * state lives inside the core Pressable, so pressing never re-renders the screen around it.
+ * className goes straight to the core Pressable so NativeWind always resolves it. The style is
+ * a plain object, never a function: NativeWind drops className styles next to a style function,
+ * which is what made backgrounds, borders and sizes vanish. Only this small component
+ * re-renders while pressed.
  */
-export function Pressable({ scale = 0.96, style, ...rest }: Props) {
+export function Pressable({ scale = 0.96, style, onPressIn, onPressOut, ...rest }: Props) {
+  const [pressed, setPressed] = useState(false);
   return (
     <RNPressable
       {...rest}
-      style={({ pressed }) => [style, pressed ? { transform: [{ scale }] } : null]}
+      onPressIn={(e) => {
+        setPressed(true);
+        onPressIn?.(e);
+      }}
+      onPressOut={(e) => {
+        setPressed(false);
+        onPressOut?.(e);
+      }}
+      style={pressed ? [style, { transform: [{ scale }] }] : style}
     />
   );
 }

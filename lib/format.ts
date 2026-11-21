@@ -16,6 +16,9 @@ export const parseClock = (value: string) =>
   value.split(':').reduce((total, part) => total * 60 + Number(part), 0);
 
 /** "Movie · 2026" */
+/** TMDB reports 0 for titles nobody has rated yet: show no score instead of 0.0 */
+export const hasScore = (t: { score: number }) => t.score > 0;
+
 export const kindLine = (t: Pick<Title, 'kind' | 'year'>) =>
   `${t.kind === 'movie' ? 'Movie' : 'Series'} · ${t.year}`;
 

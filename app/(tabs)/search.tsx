@@ -71,6 +71,7 @@ export default function Search() {
   const showResults = text.length >= 2 || filtering;
   const search = useSearch(query, filters, showResults);
   const poster = (width - 40 - GAP * (COLUMNS - 1)) / COLUMNS;
+  const tile = (width - 40 - 12) / 2;
 
   const covers = useGenreCovers();
 
@@ -196,18 +197,25 @@ export default function Search() {
 
             <View className="px-gutter pt-7">
               <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">Browse</Text>
-              <View className="flex-row flex-wrap gap-3">
+              <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {GENRES.map((genre, i) => {
-                  const tile = (width - 40 - 12) / 2;
                   const uri = imageUrl(covers[genre], 'w780');
                   return (
-                    <Reveal key={genre} index={Math.min(i, 6)}>
+                    <Reveal key={genre} index={Math.min(i, 6)} style={{ width: tile, height: 92 }}>
                       <Pressable
                         accessibilityRole="button"
+                        accessibilityLabel={genre}
                         scale={0.96}
                         onPress={() => setFilters({ ...NO_FILTERS, genres: [genre] })}
-                        className="overflow-hidden rounded-[18px] border border-white/10 bg-s1"
-                        style={{ width: tile, height: 92 }}>
+                        style={{
+                          width: tile,
+                          height: 92,
+                          overflow: 'hidden',
+                          borderRadius: 18,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255,255,255,0.1)',
+                          backgroundColor: colors.s1,
+                        }}>
                         {uri ? (
                           <Image
                             source={{ uri }}
@@ -215,7 +223,17 @@ export default function Search() {
                             style={{ position: 'absolute', width: '100%', height: '100%' }}
                           />
                         ) : null}
-                        <View className="absolute inset-0 justify-end bg-black/45 p-3">
+                        <View
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            justifyContent: 'flex-end',
+                            padding: 12,
+                            backgroundColor: 'rgba(0,0,0,0.45)',
+                          }}>
                           <Text className="text-base font-bold text-white">{genre}</Text>
                         </View>
                       </Pressable>

@@ -29,7 +29,7 @@ export function WeekStrip({ days, selected, onSelect }: WeekStripProps) {
 
   return (
     <View
-      className="mx-3 flex-row"
+      className="mx-gutter flex-row"
       style={{ height: HEIGHT }}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {width > 0 ? (

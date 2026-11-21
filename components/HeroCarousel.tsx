@@ -18,7 +18,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { heroHeightFor } from '@/lib/flight';
-import { genreLine } from '@/lib/format';
+import { genreLine, hasScore } from '@/lib/format';
 import { useIsSaved } from '@/store/store';
 import type { Title } from '@/types';
 
@@ -260,10 +260,12 @@ const Slide = memo(function Slide({
           </Pressable>
         </Animated.View>
         <Animated.View style={r2} className="mt-2 flex-row items-center gap-2.5">
-          <View className="flex-row items-center gap-1">
-            <Icon name="star" size={12} />
-            <Text className="text-[13px] font-semibold text-white">{title.score.toFixed(1)}</Text>
-          </View>
+          {hasScore(title) ? (
+            <View className="flex-row items-center gap-1">
+              <Icon name="star" size={12} />
+              <Text className="text-[13px] font-semibold text-white">{title.score.toFixed(1)}</Text>
+            </View>
+          ) : null}
           {title.runtime ? <Text className="text-[13px] text-t2">{title.runtime}</Text> : null}
           {title.rating ? (
             <View className="rounded border border-white/30 px-1.5 py-px">
@@ -278,11 +280,12 @@ const Slide = memo(function Slide({
           <CircleButton
             label={saved ? 'Remove from list' : 'Save to list'}
             active={saved}
+            tone="glass"
             onPress={() => onToggleSave(title.id)}>
             <Icon name={saved ? 'check' : 'plus'} size={20} color={saved ? '#0B0B0A' : '#fff'} />
           </CircleButton>
           <Pill title="Watch trailer" icon="play" onPress={() => onTrailer(title)} />
-          <CircleButton label="Details" onPress={open}>
+          <CircleButton label="Details" tone="glass" onPress={open}>
             <Icon name="info" size={20} />
           </CircleButton>
         </Animated.View>
