@@ -30,7 +30,7 @@ export interface HeroSlide {
 interface HeroCarouselProps {
   slides: HeroSlide[];
   onToggleSave: (id: string) => void;
-  onOpen: (title: Title) => void;
+  onOpen: (title: Title, tag: string) => void;
   onTrailer: (title: Title) => void;
   /** Milliseconds between automatic slides. 0 turns auto-rotate off. */
   interval?: number;
@@ -171,7 +171,7 @@ interface SlideProps {
   height: number;
   scrollX: SharedValue<number>;
   onToggleSave: (id: string) => void;
-  onOpen: (title: Title) => void;
+  onOpen: (title: Title, tag: string) => void;
   onTrailer: (title: Title) => void;
 }
 
@@ -219,21 +219,25 @@ const Slide = memo(function Slide({
   const r3 = useRise(scrollX, i, width, 3);
   const r4 = useRise(scrollX, i, width, 4);
 
-  const open = () => onOpen(title);
+  // Every slide has its own tag (the loop mounts each title three times)
+  const sharedTag = `hero-${i}-${title.id}`;
+  const open = () => onOpen(title, sharedTag);
 
   return (
     <View style={{ width, height, overflow: 'hidden' }}>
       <Animated.View style={[{ width, height }, artStyle]}>
-        <PosterArt
-          title={title}
-          textless
-          placeholder
-          width={width}
-          height={height}
-          radius={0}
-          size="w1280"
-          bordered={false}
-        />
+        <Animated.View sharedTransitionTag={sharedTag} style={{ width, height }}>
+          <PosterArt
+            title={title}
+            textless
+            placeholder
+            width={width}
+            height={height}
+            radius={0}
+            size="w1280"
+            bordered={false}
+          />
+        </Animated.View>
       </Animated.View>
       <Fade />
       <View

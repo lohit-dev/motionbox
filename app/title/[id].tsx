@@ -67,6 +67,8 @@ export default function TitleDetail() {
   // it flies the hero shows that same poster and the text waits; once it has landed the
   // textless artwork fades in and the text and heavy sections arrive.
   const flies = !!tag;
+  // The home carousel already shows the textless art, so the hero must not swap to it again
+  const fromHero = !!tag?.startsWith('hero-');
   const [ready, setReady] = useState(!flies);
   const enter = useSharedValue(flies ? 0 : 1);
   useEffect(() => {
@@ -101,12 +103,14 @@ export default function TitleDetail() {
   const barSettle = useAnimatedStyle(() => ({ opacity: enter.value }));
 
   const heroHeight = heroHeightFor(width);
-  const heroStretch = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: interpolate(scrollY.value, [-220, 0], [-110, 0], Extrapolation.CLAMP) },
-      { scale: interpolate(scrollY.value, [-220, 0], [1.4, 1], Extrapolation.CLAMP) },
-    ],
-  }));
+  // Pulling down grows the hero by exactly the pull: scale about the centre, then lift by half,
+  // so the top stays on the screen edge and the bottom stays where it was
+  const heroStretch = useAnimatedStyle(() => {
+    const pull = Math.max(0, -scrollY.value);
+    return {
+      transform: [{ translateY: -pull / 2 }, { scale: 1 + pull / heroHeight }],
+    };
+  });
   const heroText = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [0, heroHeight * 0.45], [1, 0], Extrapolation.CLAMP),
     transform: [
@@ -223,16 +227,17 @@ export default function TitleDetail() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           bounces>
-          <View style={{ width: '100%', height: heroHeight, overflow: 'hidden' }}>
-            {/* The card's poster lands on this box. It holds that same poster until it has landed */}
-            <Animated.View
-              sharedTransitionTag={tag}
-              style={{ width, height: heroHeight, overflow: 'hidden' }}>
-              <Animated.View style={[{ width, height: heroHeight }, heroStretch]}>
+          <View style={{ width: '100%', height: heroHeight }}>
+            {/* The card's art lands on this box and stays until it has landed. The stretch wraps
+                the tagged box, so clipping it for the flight never cuts the pull-down. */}
+            <Animated.View style={[{ width, height: heroHeight }, heroStretch]}>
+              <Animated.View
+                sharedTransitionTag={tag}
+                style={{ width, height: heroHeight, overflow: 'hidden' }}>
                 <PosterArt
                   title={title}
                   textless
-                  hold={!ready}
+                  hold={!ready && !fromHero}
                   placeholder
                   width={width}
                   height={heroHeight}
@@ -240,11 +245,14 @@ export default function TitleDetail() {
                   size="w1280"
                   bordered={false}
                 />
-              </Animated.View>
-              <Animated.View
-                pointerEvents="none"
-                style={[{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }, barSettle]}>
-                <Fade />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+                    barSettle,
+                  ]}>
+                  <Fade />
+                </Animated.View>
               </Animated.View>
             </Animated.View>
             <Animated.View

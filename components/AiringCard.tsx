@@ -19,11 +19,12 @@ interface AiringCardProps {
   title: Title;
   reminded: boolean;
   onToggleReminder: (id: string) => void;
-  onPress?: (title: Title) => void;
+  onPress?: (title: Title, tag: string) => void;
 }
 
 export function AiringCard({ entry, title, reminded, onToggleReminder, onPress }: AiringCardProps) {
   const live = entry.time === 'Now';
+  const sharedTag = `airing-${title.id}-${entry.time}`;
   const rotate = useSharedValue(0);
   const wiggle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotate.value}deg` }] }));
 
@@ -42,9 +43,11 @@ export function AiringCard({ entry, title, reminded, onToggleReminder, onPress }
       accessibilityRole="button"
       accessibilityLabel={title.name}
       scale={0.985}
-      onPress={() => onPress?.(title)}
+      onPress={() => onPress?.(title, sharedTag)}
       className="flex-row items-center gap-3 rounded-[22px] bg-s1 py-3.5 pl-3 pr-3.5">
-      <PosterArt title={title} width={56} height={84} radius={12} size="w342" />
+      <Animated.View sharedTransitionTag={sharedTag} style={{ width: 56, height: 84 }}>
+        <PosterArt title={title} width={56} height={84} radius={12} size="w342" />
+      </Animated.View>
       <View className="flex-1">
         <Text numberOfLines={1} className="text-lg font-bold tracking-tight text-white">
           {title.name}
