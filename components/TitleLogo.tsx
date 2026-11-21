@@ -5,7 +5,7 @@ import { imageUrl } from '@/lib/tmdb';
 import type { Title } from '@/types';
 
 interface TitleLogoProps {
-  title: Pick<Title, 'name' | 'logoPath' | 'logoRatio'>;
+  title: Pick<Title, 'name' | 'logoPath'>;
   maxWidth: number;
   maxHeight: number;
   /** Font size for the plain text fallback */
@@ -13,25 +13,21 @@ interface TitleLogoProps {
 }
 
 /**
- * Title logo scaled to fit a box while keeping its own proportions, so a wide wordmark and a
- * tall emblem both look right. The ratio comes with the title data, so the logo is sized on
- * the first render and never pops in after a measuring pass. Falls back to the name as text
- * when there is no logo or it fails to load.
+ * Title logo contained inside a fixed box, so unexpected image metadata cannot stretch it
+ * beyond the hero or carousel. Falls back to the name as text when the logo is missing.
  */
 export function TitleLogo({ title, maxWidth, maxHeight, fontSize = 40 }: TitleLogoProps) {
   const uri = imageUrl(title.logoPath, 'w500');
-  const ratio = title.logoRatio && title.logoRatio > 0 ? title.logoRatio : null;
   const [failed, setFailed] = useState<string | null>(null);
 
-  if (uri && ratio && failed !== uri) {
-    const w = Math.min(maxWidth, maxHeight * ratio);
+  if (uri && failed !== uri) {
     return (
       <Image
         source={{ uri }}
         resizeMode="contain"
         accessibilityLabel={title.name}
         onError={() => setFailed(uri)}
-        style={{ width: w, height: w / ratio }}
+        style={{ width: maxWidth, height: maxHeight }}
       />
     );
   }

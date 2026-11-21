@@ -223,10 +223,12 @@ export default function TitleDetail() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           bounces>
-          <View style={{ width: '100%', height: heroHeight }}>
+          <View style={{ width: '100%', height: heroHeight, overflow: 'hidden' }}>
             {/* The card's poster lands on this box. It holds that same poster until it has landed */}
-            <Animated.View sharedTransitionTag={tag} style={{ width, height: heroHeight }}>
-              <Animated.View style={heroStretch}>
+            <Animated.View
+              sharedTransitionTag={tag}
+              style={{ width, height: heroHeight, overflow: 'hidden' }}>
+              <Animated.View style={[{ width, height: heroHeight }, heroStretch]}>
                 <PosterArt
                   title={title}
                   textless

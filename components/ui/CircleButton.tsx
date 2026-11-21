@@ -34,8 +34,15 @@ export function CircleButton({
       accessibilityLabel={label}
       onPress={onPress}
       scale={0.92}
-      className={`items-center justify-center rounded-full ${active ? 'bg-white' : tone === 'glass' ? 'bg-black/55' : 'bg-s2'} ${className}`}
-      style={{ width: size, height: size }}>
+      className={`items-center justify-center rounded-full ${className}`}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: tone === 'glass' ? 1 : 0,
+        borderColor: 'rgba(255,255,255,0.14)',
+        backgroundColor: active ? colors.white : tone === 'glass' ? 'rgba(0,0,0,0.55)' : colors.s2,
+      }}>
       {children ??
         (icon ? <Icon name={icon} size={20} color={active ? colors.ink : colors.white} /> : null)}
     </Pressable>

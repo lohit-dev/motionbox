@@ -31,16 +31,16 @@ function PosterBase({
   onPress,
 }: PosterProps) {
   // One tag per card on screen: the same title can sit in several rails at once
-  const tag = `poster-${title.id}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const sharedTag = `poster-${title.id}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title.name}
       scale={0.955}
-      onPress={() => onPress?.(title, tag)}
+      onPress={() => onPress?.(title, sharedTag)}
       style={{ width }}>
       <View>
-        <Animated.View sharedTransitionTag={tag} style={{ width, height: width * 1.5 }}>
+        <Animated.View sharedTransitionTag={sharedTag} style={{ width, height: width * 1.5 }}>
           <PosterArt title={title} width={width} height={width * 1.5} />
         </Animated.View>
         {showScore ? (
@@ -60,10 +60,13 @@ function PosterBase({
           </View>
         ) : null}
       </View>
-      <Text numberOfLines={1} className="mt-2 text-[13px] font-semibold text-white">
+      <Text
+        numberOfLines={1}
+        style={{ width }}
+        className="mt-2 text-[13px] font-semibold text-white">
         {title.name}
       </Text>
-      <Text numberOfLines={1} className="mt-0.5 text-xs text-t3">
+      <Text numberOfLines={1} style={{ width }} className="mt-0.5 text-xs text-t3">
         {subtitle ?? kindLine(title)}
       </Text>
     </Pressable>

@@ -16,7 +16,6 @@ import { Top10Card } from '@/components/Top10Card';
 import { Wordmark } from '@/components/Wordmark';
 import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
-import { Pressable } from '@/components/ui/Pressable';
 import { useHome } from '@/hooks/useHome';
 import { useTitle, useTitles } from '@/hooks/useTitle';
 import { useUpdates } from '@/hooks/useUpdates';
@@ -165,12 +164,11 @@ export default function Home() {
               <View className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-white" />
             ) : null}
           </CircleButton>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Profile"
-            scale={0.92}
-            onPress={() => router.push('/profile')}
-            className="h-[42px] w-[42px] items-center justify-center rounded-full bg-black/55">
+          <CircleButton
+            label="Profile"
+            size={42}
+            tone="glass"
+            onPress={() => router.push('/profile')}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
               <Circle cx={12} cy={8} r={4} stroke="#fff" strokeWidth={2} />
               <Path
@@ -180,7 +178,7 @@ export default function Home() {
                 strokeLinecap="round"
               />
             </Svg>
-          </Pressable>
+          </CircleButton>
         </View>
       </View>
     </View>
