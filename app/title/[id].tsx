@@ -65,10 +65,9 @@ export default function TitleDetail() {
 
   // The card's art flies into the hero (shared element transition, tagged by `tag`). The text
   // and the heavy sections wait until it has landed.
-  // A poster card flies in as the very same poster and keeps it. TMDB's textless poster is often
-  // a different picture altogether, so swapping to it made the artwork change after landing.
-  // The poster already carries the title lettering, so the logo is left out with it. Everything
-  // else (the home carousel, a link, search without a card) already shows textless art.
+  // A poster card keeps its artwork only for the shared-element flight. Once it lands, switch
+  // to textless art so the TMDB title logo can be shown cleanly over the hero.
+  const flies = Boolean(tag);
   const keepPoster = flies && !tag?.startsWith('hero-');
   const [ready, setReady] = useState(!flies);
   const enter = useSharedValue(flies ? 0 : 1);
@@ -237,7 +236,8 @@ export default function TitleDetail() {
                 style={{ width, height: heroHeight, overflow: 'hidden' }}>
                 <PosterArt
                   title={title}
-                  textless={!keepPoster}
+                  textless
+                  hold={keepPoster && !ready}
                   placeholder
                   width={width}
                   height={heroHeight}
@@ -264,16 +264,14 @@ export default function TitleDetail() {
                 <Text className="text-eyebrow font-semibold uppercase text-t2">
                   {kindLine(title)}
                 </Text>
-                {!keepPoster || !title.posterPath ? (
-                  <View className="mt-2 items-center">
-                    <TitleLogo
-                      title={title}
-                      maxWidth={Math.min(width * 0.8, 420)}
-                      maxHeight={110}
-                      fontSize={36}
-                    />
-                  </View>
-                ) : null}
+                <View className="mt-2 items-center">
+                  <TitleLogo
+                    title={title}
+                    maxWidth={Math.min(width * 0.8, 420)}
+                    maxHeight={110}
+                    fontSize={36}
+                  />
+                </View>
                 <View className="mt-3 flex-row items-center gap-3">
                   {hasScore(title) ? (
                     <View className="flex-row items-center gap-1">
