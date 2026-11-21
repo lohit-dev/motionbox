@@ -1,3 +1,5 @@
+import { Innertube } from 'youtubei.js/react-native';
+
 /**
  * Resolves a YouTube video id to a URL that expo-video can play.
  *
@@ -12,36 +14,31 @@ export interface Stream {
   hls: boolean;
 }
 
-// Loosely typed on purpose: the shape of youtubei.js differs a little between major versions.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Innertube = any;
+type YouTubeClient = Awaited<ReturnType<typeof Innertube.create>>;
 
 /** Signed URLs stop working after about six hours and are tied to the device's network. */
 const TTL = 4 * 60 * 60 * 1000;
 const cache = new Map<string, { stream: Stream; at: number }>();
 const inflight = new Map<string, Promise<Stream>>();
 
-let client: Promise<Innertube> | null = null;
+let client: Promise<YouTubeClient> | null = null;
 
 /** One shared client: creating it downloads YouTube's player script, which takes a second or two. */
-function innertube(): Promise<Innertube> {
+function innertube(): Promise<YouTubeClient> {
   if (!client) {
-    // Imported lazily so the library only loads when a trailer is actually played
-    client = import('youtubei.js/react-native')
-      .then(({ Innertube }) =>
-        Innertube.create({ generate_session_locally: true, retrieve_player: false })
-      )
-      .catch((error) => {
+    client = Innertube.create({ generate_session_locally: true, retrieve_player: false }).catch(
+      (error) => {
         client = null;
         if (__DEV__)
           console.error('[youtube] InnerTube initialization failed', error?.stack ?? error);
         throw error;
-      });
+      }
+    );
   }
   return client;
 }
 
-async function basicInfo(yt: Innertube, id: string, name: 'IOS' | 'TV' | 'ANDROID' | 'WEB') {
+async function basicInfo(yt: YouTubeClient, id: string, name: 'IOS' | 'TV' | 'ANDROID' | 'WEB') {
   const info = await yt.getBasicInfo(id, { client: name });
   if (!info?.streaming_data) {
     const reason = info?.playability_status?.reason ?? info?.playability_status?.status;
@@ -59,7 +56,7 @@ async function basicInfo(yt: Innertube, id: string, name: 'IOS' | 'TV' | 'ANDROI
 const CLIENTS = ['IOS', 'TV', 'ANDROID', 'WEB'] as const;
 
 async function fromClient(
-  yt: Innertube,
+  yt: YouTubeClient,
   id: string,
   name: (typeof CLIENTS)[number]
 ): Promise<Stream> {
@@ -73,18 +70,16 @@ async function fromClient(
   if (hls) return { uri: hls, hls: true };
   // Use direct muxed MP4 formats: youtubei.js needs an external JS interpreter
   // to decipher ciphered URLs in React Native.
-  const formats = info.streaming_data.formats ?? [];
+  const formats = info.streaming_data?.formats ?? [];
   const directFormats = formats
     .filter(
-      (candidate: any) =>
+      (candidate) =>
         candidate.url &&
         candidate.has_audio &&
         candidate.has_video &&
         candidate.mime_type?.startsWith('video/mp4')
     )
-    .sort(
-      (a: any, b: any) => (b.height ?? 0) - (a.height ?? 0) || (b.bitrate ?? 0) - (a.bitrate ?? 0)
-    );
+    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.bitrate ?? 0) - (a.bitrate ?? 0));
   const format = directFormats[0];
   const uri: string | undefined = format?.url;
   if (__DEV__) {
