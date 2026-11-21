@@ -1,5 +1,6 @@
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { initials } from '@/lib/format';
 import { imageUrl } from '@/lib/tmdb';
 

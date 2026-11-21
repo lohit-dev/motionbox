@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Image, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Image, ScrollView, View, useWindowDimensions } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { EmptyState } from '@/components/EmptyState';
 import { Sheet } from '@/components/Sheet';

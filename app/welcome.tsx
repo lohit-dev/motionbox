@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/ui/Text';
 import { Fade } from '@/components/Fade';
 import { PosterArt } from '@/components/PosterArt';
 import { Wordmark } from '@/components/Wordmark';

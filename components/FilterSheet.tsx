@@ -1,5 +1,6 @@
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, View, useWindowDimensions } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { Sheet } from '@/components/Sheet';
 import { Slider } from '@/components/Slider';
 import { Chip } from '@/components/ui/Chip';

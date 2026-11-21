@@ -29,7 +29,18 @@
           "backgroundColor": "#0B0B0A"
         }
       ],
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Geist-Regular.ttf",
+            "./assets/fonts/Geist-Medium.ttf",
+            "./assets/fonts/Geist-SemiBold.ttf",
+            "./assets/fonts/Geist-Bold.ttf",
+            "./assets/fonts/Geist-ExtraBold.ttf"
+          ]
+        }
+      ],
       "expo-status-bar",
       "expo-web-browser",
       [

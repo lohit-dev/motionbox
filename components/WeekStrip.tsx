@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { Pressable } from '@/components/ui/Pressable';
 import { springs } from '@/lib/motion';

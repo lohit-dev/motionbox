@@ -84,7 +84,7 @@ function TabItem({
         </Animated.View>
         <Animated.Text
           numberOfLines={1}
-          style={[{ color: colors.ink, fontSize: 15, fontWeight: '700' }, text]}>
+          style={[{ color: colors.ink, fontSize: 15, fontFamily: 'Geist-Bold' }, text]}>
           {label}
         </Animated.Text>
       </RNPressable>

@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/ui/Text';
 import { EmptyState } from '@/components/EmptyState';
 import { PosterArt } from '@/components/PosterArt';
 import { Reveal } from '@/components/Reveal';

@@ -1,6 +1,6 @@
-import { Text } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Image, Text } from 'react-native';
+import { Image } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { imageUrl } from '@/lib/tmdb';
 import type { Title } from '@/types';
 

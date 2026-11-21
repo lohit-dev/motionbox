@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   ScrollView,
-  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -11,6 +10,7 @@ import {
   type ScrollViewInstance,
 } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { ActionSheet } from '@/components/ActionSheet';
 import { EmptyState } from '@/components/EmptyState';
 import { Poster } from '@/components/Poster';

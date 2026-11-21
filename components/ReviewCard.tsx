@@ -1,5 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/ui/Icon';
 import type { Review } from '@/types';

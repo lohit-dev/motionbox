@@ -1,7 +1,8 @@
 import { memo, useEffect, useId, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { Text } from '@/components/ui/Text';
 import { FadeImage } from '@/components/FadeImage';
 import { imageUrl, type PosterSize } from '@/lib/tmdb';
 import type { Title } from '@/types';

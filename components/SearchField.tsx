@@ -1,5 +1,6 @@
-import { Text, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
@@ -35,7 +36,7 @@ export function SearchField({
           onSubmitEditing={onSubmit}
           autoCorrect={false}
           selectionColor={colors.white}
-          className="flex-1 text-base text-white"
+          className="flex-1 font-normal text-base text-white"
         />
         {value ? (
           <Pressable

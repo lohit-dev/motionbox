@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/components/ui/Text';
 
 /** "motion." wordmark with the white full stop. */
 export function Wordmark({ size = 30 }: { size?: number }) {

@@ -1,7 +1,8 @@
 import { memo, useId } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/Text';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 import { PosterArt } from '@/components/PosterArt';

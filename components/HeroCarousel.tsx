@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { memo, useCallback, useMemo, useRef } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -10,6 +10,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/Text';
 import { Fade } from '@/components/Fade';
 import { PosterArt } from '@/components/PosterArt';
 import { TitleLogo } from '@/components/TitleLogo';
@@ -277,7 +278,7 @@ const Slide = memo(function Slide({
             </View>
           ) : null}
         </Animated.View>
-        <Animated.Text style={r3} className="mt-1 text-[13px] text-t2">
+        <Animated.Text style={r3} className="mt-1 font-normal text-[13px] text-t2">
           {genreLine(title, 2)}
         </Animated.Text>
         <Animated.View style={r4} className="mt-5 flex-row items-center gap-3">

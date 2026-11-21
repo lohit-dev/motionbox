@@ -1,6 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Share, Text, View, useWindowDimensions } from 'react-native';
+import { Share, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -15,6 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { ActionSheet } from '@/components/ActionSheet';
 import { Avatar } from '@/components/Avatar';
@@ -464,7 +465,7 @@ export default function TitleDetail() {
                   marginHorizontal: 12,
                   color: colors.white,
                   fontSize: 16,
-                  fontWeight: '700',
+                  fontFamily: 'Geist-Bold',
                 },
                 barTitle,
               ]}>
