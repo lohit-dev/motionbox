@@ -7,11 +7,11 @@ import {
   FlatList,
   ScrollView,
   Image,
-  Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import colors from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
@@ -90,10 +90,14 @@ export default function Search() {
     if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
   };
   // Swipe sideways over the results to move between All, Movies, Series and People
-  const swipe = useSwipe((direction) => {
-    const next = TABS[TABS.findIndex((t) => t.value === tab) + direction];
-    if (next) pickTab(next.value);
-  });
+  const tabIndex = TABS.findIndex((t) => t.value === tab);
+  const swipe = useSwipe(
+    (direction) => {
+      const next = TABS[tabIndex + direction];
+      if (next) pickTab(next.value);
+    },
+    { next: tabIndex < TABS.length - 1, prev: tabIndex > 0 }
+  );
 
   // Read through a ref: depending on `text` would hand every poster a new callback on each
   // keystroke and re-render the whole grid

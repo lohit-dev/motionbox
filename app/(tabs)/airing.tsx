@@ -1,8 +1,9 @@
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Text } from '@/components/ui/Text';
 import { AiringCard } from '@/components/AiringCard';
 import { NeedsKey } from '@/components/NeedsKey';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -40,10 +41,13 @@ export default function Airing() {
   const open = useOpenTitle();
 
   // Swipe the list sideways to move to the next or previous day
-  const swipe = useSwipe((direction) => {
-    const next = airingDay + direction;
-    if (next >= 0 && next < week.length) setAiringDay(next);
-  });
+  const swipe = useSwipe(
+    (direction) => {
+      const next = airingDay + direction;
+      if (next >= 0 && next < week.length) setAiringDay(next);
+    },
+    { next: airingDay < week.length - 1, prev: airingDay > 0 }
+  );
 
   const rows = (schedule[airingDay] ?? []).filter(
     (e) => airingSegment === 'all' || reminders.includes(e.id) || saved.includes(e.id)

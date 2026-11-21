@@ -1,18 +1,35 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
-import { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import {
+  Easing,
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { springs } from '@/lib/motion';
+import { ease, springs } from '@/lib/motion';
+
+interface SwipeOptions {
+  /** Is there a next / previous page to go to? Past either end the content resists instead. */
+  next: boolean;
+  prev: boolean;
+}
 
 /**
- * Horizontal swipe that moves between tabs or days. The content follows the finger a little,
- * then springs back while the new tab takes over. `go(1)` is the next one, `go(-1)` the one
- * before; the caller ignores moves past either end.
+ * Horizontal swipe between tabs or days. The content follows the finger one to one. Let go past
+ * a quarter of the width (or with a flick) and the page slides off, the next one slides in from
+ * the other side. Let go short of that and it springs back.
  *
- * Vertical scrolling is untouched: the swipe only starts after a clear sideways move, and it
- * gives up as soon as the finger travels up or down.
+ * Vertical scrolling is untouched: the swipe only starts after a clear sideways move and gives
+ * up as soon as the finger travels up or down.
  */
-export function useSwipe(go: (direction: 1 | -1) => void) {
+export function useSwipe(go: (direction: 1 | -1) => void, { next, prev }: SwipeOptions) {
+  const { width } = useWindowDimensions();
   const latest = useRef(go);
   useEffect(() => {
     latest.current = go;
@@ -20,24 +37,51 @@ export function useSwipe(go: (direction: 1 | -1) => void) {
   const call = (direction: 1 | -1) => latest.current(direction);
 
   const x = useSharedValue(0);
+  const hasNext = useSharedValue(next);
+  const hasPrev = useSharedValue(prev);
+  useEffect(() => {
+    hasNext.set(next);
+    hasPrev.set(prev);
+  }, [next, prev, hasNext, hasPrev]);
+
   const gesture = useMemo(
     () =>
       Gesture.Pan()
-        .activeOffsetX([-20, 20])
-        .failOffsetY([-16, 16])
+        .activeOffsetX([-16, 16])
+        .failOffsetY([-14, 14])
         .onUpdate((e) => {
-          x.set(e.translationX * 0.25);
+          const allowed = e.translationX < 0 ? hasNext.value : hasPrev.value;
+          x.set(allowed ? e.translationX : e.translationX * 0.2);
         })
         .onEnd((e) => {
-          const far = Math.abs(e.translationX) > 64 || Math.abs(e.velocityX) > 650;
-          if (far) runOnJS(call)(e.translationX < 0 ? 1 : -1);
-        })
-        .onFinalize(() => {
-          x.set(withSpring(0, springs.soft));
+          const direction = e.translationX < 0 ? 1 : -1;
+          const allowed = direction === 1 ? hasNext.value : hasPrev.value;
+          const far = Math.abs(e.translationX) > width * 0.25 || Math.abs(e.velocityX) > 600;
+          if (!allowed || !far) {
+            x.set(withSpring(0, springs.soft));
+            return;
+          }
+          // Out one side, swap the page, in from the other
+          x.set(
+            withTiming(
+              -direction * width,
+              { duration: 150, easing: Easing.in(Easing.quad) },
+              (done) => {
+                if (!done) return;
+                runOnJS(call)(direction);
+                x.set(direction * width * 0.45);
+                x.set(withTiming(0, { duration: 260, easing: ease }));
+              }
+            )
+          );
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [x]
+    [x, width]
   );
-  const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(Math.abs(x.value), [0, width * 0.6], [1, 0.25], Extrapolation.CLAMP),
+    transform: [{ translateX: x.value }],
+  }));
   return { gesture, style };
 }
