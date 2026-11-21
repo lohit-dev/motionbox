@@ -1,7 +1,8 @@
-import { memo, useId } from 'react';
+import { memo, useEffect, useId, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { FadeImage } from '@/components/FadeImage';
 import { imageUrl, type PosterSize } from '@/lib/tmdb';
 import type { Title } from '@/types';
 
@@ -17,8 +18,16 @@ interface PosterArtProps {
   size?: PosterSize;
   /** Hairline border, off for full-bleed heroes */
   bordered?: boolean;
-  /** Paint the small poster first (already cached from the card) while the large one loads */
+  /**
+   * Paint the small poster first (already cached from the card) while the large one fades in
+   * over it. When the artwork later changes, the old one stays underneath until the new one
+   * has loaded.
+   */
   placeholder?: boolean;
+  /** With `placeholder`: fade the large image in. Off when something already covers it. */
+  fade?: boolean;
+  /** Called once the artwork is on screen (immediately for generated art) */
+  onReady?: () => void;
 }
 
 function hash(text: string) {
@@ -107,9 +116,17 @@ function PosterArtBase({
   textless = false,
   showName = true,
   placeholder = false,
+  fade = true,
+  onReady,
 }: PosterArtProps) {
   const uri = imageUrl((textless && title.heroPath) || title.posterPath, size);
   const base = imageUrl(title.posterPath, 'w500');
+  const [loaded, setLoaded] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!uri) onReady?.();
+  }, [uri, onReady]);
+
   return (
     <View
       className={`overflow-hidden bg-s1 ${bordered ? 'border border-white/10' : ''}`}
@@ -119,7 +136,27 @@ function PosterArtBase({
           {placeholder && base && base !== uri ? (
             <Image source={{ uri: base }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : null}
-          <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          {placeholder && loaded && loaded !== uri ? (
+            <Image source={{ uri: loaded }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : null}
+          {placeholder ? (
+            <FadeImage
+              key={uri}
+              uri={uri}
+              duration={fade ? 180 : 0}
+              onLoad={() => {
+                setLoaded(uri);
+                onReady?.();
+              }}
+            />
+          ) : (
+            <Image
+              source={{ uri }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              onLoad={onReady}
+            />
+          )}
         </>
       ) : (
         <GeneratedArt name={title.name} width={width} height={height} showName={showName} />

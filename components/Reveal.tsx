@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -11,13 +11,22 @@ interface RevealProps {
   style?: StyleProp<ViewStyle>;
 }
 
+// One builder per delay, built once. A new builder on every render makes Reanimated treat the
+// view as reconfigured, and a list that re-renders would replay its entrance.
+const builders = new Map<number, ReturnType<typeof build>>();
+const build = (delay: number) => FadeInDown.delay(delay).duration(560).easing(ease);
+const entering = (index: number) => {
+  const delay = stagger(index);
+  let b = builders.get(delay);
+  if (!b) builders.set(delay, (b = build(delay)));
+  return b;
+};
+
 /** Fades and rises into place when it mounts. Wrap list items to get a staggered entrance. */
-export function Reveal({ index = 0, children, style }: RevealProps) {
+export const Reveal = memo(function Reveal({ index = 0, children, style }: RevealProps) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(stagger(index)).duration(560).easing(ease)}
-      style={style}>
+    <Animated.View entering={entering(index)} style={style}>
       {children}
     </Animated.View>
   );
-}
+});

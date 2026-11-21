@@ -1,20 +1,16 @@
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Share, Text, View, useWindowDimensions } from 'react-native';
+import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { BackHandler, Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
-  Easing,
   Extrapolation,
   FadeIn,
-  FadeInDown,
   interpolate,
   runOnJS,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,12 +35,10 @@ import { useTitle, useTitles } from '@/hooks/useTitle';
 import { parseId } from '@/lib/api';
 import {
   heroHeightFor,
+  useClaimFlight,
   useCloseTitle,
-  useClosing,
-  useFlightProgress,
-  useFlying,
-  useHeroReady,
   useOpenTitle,
+  useReleaseFlight,
 } from '@/lib/flight';
 import { genreLine, kindLine } from '@/lib/format';
 import { springs } from '@/lib/motion';
@@ -54,15 +48,16 @@ import { warmUpYouTube } from '@/lib/youtube';
 import { useApp, useIsSaved } from '@/store/store';
 import type { Clip } from '@/types';
 
+/** Opened without a card to fly from: a plain fade, built once */
+const PLAIN_ENTRANCE = FadeIn.duration(200);
+
 export default function TitleDetail() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openTitle = useOpenTitle();
   const closeTitle = useCloseTitle();
-  const flying = useFlying();
-  const progress = useFlightProgress();
-  const heroReady = useHeroReady();
-  const closing = useClosing(id);
+  const claim = useClaimFlight();
+  const release = useReleaseFlight();
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
   const { title, loading, failed } = useTitle(id);
@@ -79,18 +74,31 @@ export default function TitleDetail() {
   const [noTrailer, setNoTrailer] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // Was this screen opened by a card flying into it? Decides which entrance to play.
-  const [withFlight] = useState(flying);
+  // This screen's own flight. `progress` runs 0 (the card) to 1 (this page) and drives the
+  // artwork, the page background and the entrance below, on the UI thread. Closing runs it
+  // back to 0, so open and close are the same animation in two directions.
+  const [flight] = useState(() => claim(id));
+  const { progress, landed } = flight;
+  const withFlight = !!flight.rect;
+  useEffect(() => () => release(flight), [flight, release]);
+
+  // Below-the-fold sections wait until the flight has landed, so it stays smooth
   const [ready, setReady] = useState(!withFlight);
+  useAnimatedReaction(
+    () => progress.value >= 1,
+    (done, was) => {
+      if (done && !was) runOnJS(setReady)(true);
+    }
+  );
+  // The flying artwork hands over once this hero has painted
+  const heroPainted = useCallback(() => {
+    landed.set(1);
+  }, [landed]);
+
   // Resolve YouTube's player script while the person reads the title page.
   useEffect(() => {
     if (title?.clips?.length) warmUpYouTube();
   }, [title?.clips?.length]);
-  useEffect(() => {
-    if (ready) return;
-    const t = setTimeout(() => setReady(true), 560);
-    return () => clearTimeout(t);
-  }, [ready]);
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
@@ -103,26 +111,33 @@ export default function TitleDetail() {
     },
   });
 
-  // Dark page background fades in just after the artwork starts moving, and out as it flies home
-  const pageBg = useSharedValue(1);
-  const content = useSharedValue(1);
-  // Tell the flight this hero exists so the flying artwork can hand over to it
-  useEffect(() => {
-    const frame = requestAnimationFrame(heroReady);
-    return () => cancelAnimationFrame(frame);
-  }, [heroReady]);
-  useEffect(() => {
-    if (!closing) return;
-    content.value = withTiming(0, { duration: 150, easing: Easing.linear });
-    pageBg.value = withDelay(60, withTiming(0, { duration: 320, easing: Easing.linear }));
-  }, [closing, content, pageBg]);
-  // Follows the artwork's flight on the UI thread, so a slow mount can't leave a black gap
+  // The system back button flies home too instead of cutting away. Only while this page is the
+  // one on top, so a sheet opened over it still gets its own back press.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        closeTitle(id, scrollY.value);
+        return true;
+      });
+      return () => sub.remove();
+    }, [closeTitle, id, scrollY])
+  );
+
+  // Dark page background arrives just after the artwork starts moving and leaves as it flies home
   const pageBgStyle = useAnimatedStyle(() => ({
-    opacity:
-      pageBg.value *
-      (withFlight ? interpolate(progress.value, [0.1, 0.7], [0, 1], Extrapolation.CLAMP) : 1),
+    opacity: interpolate(progress.value, [0.1, 0.7], [0, 1], Extrapolation.CLAMP),
   }));
-  const contentStyle = useAnimatedStyle(() => ({ opacity: content.value }));
+  // Text and controls settle in together once the artwork is nearly there, and are gone within
+  // a few frames of closing
+  const settle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.55, 0.95], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(progress.value, [0.55, 1], [18, 0], Extrapolation.CLAMP) },
+    ],
+  }));
+  const barSettle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.4, 0.9], [0, 1], Extrapolation.CLAMP),
+  }));
 
   const heroHeight = heroHeightFor(width);
   const heroStretch = useAnimatedStyle(() => ({
@@ -239,9 +254,6 @@ export default function TitleDetail() {
     ] as [string, string][]
   ).filter(([, v]) => !!v);
 
-  const enter = (delay: number, ms: number, down = false) =>
-    withFlight ? (down ? FadeInDown : FadeIn).delay(delay).duration(ms) : FadeIn.duration(220);
-
   return (
     <View style={{ flex: 1 }}>
       <Animated.View
@@ -258,7 +270,7 @@ export default function TitleDetail() {
           pageBgStyle,
         ]}
       />
-      <Animated.View style={[{ flex: 1 }, contentStyle]}>
+      <Animated.View entering={withFlight ? undefined : PLAIN_ENTRANCE} style={{ flex: 1 }}>
         <Animated.ScrollView
           onScroll={onScroll}
           scrollEventThrottle={16}
@@ -270,6 +282,8 @@ export default function TitleDetail() {
                 title={title}
                 textless
                 placeholder
+                fade={ready}
+                onReady={heroPainted}
                 width={width}
                 height={heroHeight}
                 radius={0}
@@ -279,9 +293,8 @@ export default function TitleDetail() {
             </Animated.View>
             <Fade />
             <Animated.View
-              entering={enter(520, 320)}
               pointerEvents="box-none"
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 20 }}>
+              style={[{ position: 'absolute', left: 0, right: 0, bottom: 20 }, settle]}>
               <Animated.View
                 pointerEvents="box-none"
                 style={[{ alignItems: 'center', paddingHorizontal: 20 }, heroText]}>
@@ -318,7 +331,7 @@ export default function TitleDetail() {
             </Animated.View>
           </View>
 
-          <Animated.View entering={enter(300, 480, true)}>
+          <Animated.View style={settle}>
             <Text
               onPress={() => setExpanded((e) => !e)}
               className="px-gutter pt-2 text-[15px] leading-6 text-t2">
@@ -450,9 +463,11 @@ export default function TitleDetail() {
 
         {/* Top bar: clear over the hero, ink with the title once scrolled */}
         <Animated.View
-          entering={enter(270, 260)}
           pointerEvents="box-none"
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: top + 8 }}>
+          style={[
+            { position: 'absolute', left: 0, right: 0, top: 0, paddingTop: top + 8 },
+            barSettle,
+          ]}>
           <Animated.View
             pointerEvents="none"
             style={[

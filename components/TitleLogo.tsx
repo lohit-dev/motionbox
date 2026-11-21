@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Text } from 'react-native';
 
 import { imageUrl } from '@/lib/tmdb';
 import type { Title } from '@/types';
 
 interface TitleLogoProps {
-  title: Pick<Title, 'name' | 'logoPath'>;
+  title: Pick<Title, 'name' | 'logoPath' | 'logoRatio'>;
   maxWidth: number;
   maxHeight: number;
   /** Font size for the plain text fallback */
@@ -14,37 +14,24 @@ interface TitleLogoProps {
 
 /**
  * Title logo scaled to fit a box while keeping its own proportions, so a wide wordmark and a
- * tall emblem both look right. Falls back to the name as text when there is no logo.
+ * tall emblem both look right. The ratio comes with the title data, so the logo is sized on
+ * the first render and never pops in after a measuring pass. Falls back to the name as text
+ * when there is no logo or it fails to load.
  */
 export function TitleLogo({ title, maxWidth, maxHeight, fontSize = 40 }: TitleLogoProps) {
   const uri = imageUrl(title.logoPath, 'w500');
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const [failed, setFailed] = useState(false);
+  const ratio = title.logoRatio && title.logoRatio > 0 ? title.logoRatio : null;
+  const [failed, setFailed] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSize(null);
-    setFailed(false);
-    if (!uri) return;
-    let live = true;
-    Image.getSize(
-      uri,
-      (w, h) => live && setSize({ w, h }),
-      () => live && setFailed(true)
-    );
-    return () => {
-      live = false;
-    };
-  }, [uri]);
-
-  if (uri && !failed) {
-    if (!size) return <View style={{ width: maxWidth, height: maxHeight * 0.5 }} />;
-    const k = Math.min(maxWidth / size.w, maxHeight / size.h);
+  if (uri && ratio && failed !== uri) {
+    const w = Math.min(maxWidth, maxHeight * ratio);
     return (
       <Image
         source={{ uri }}
         resizeMode="contain"
         accessibilityLabel={title.name}
-        style={{ width: size.w * k, height: size.h * k }}
+        onError={() => setFailed(uri)}
+        style={{ width: w, height: w / ratio }}
       />
     );
   }

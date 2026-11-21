@@ -86,6 +86,8 @@ export interface Title {
   backdropPath: string | null;
   /** TMDB localized title logo, when available */
   logoPath?: string | null;
+  /** Width over height of the logo, so it can be sized before the image has loaded */
+  logoRatio?: number | null;
   /** Textless poster, preferred behind a title logo */
   heroPath?: string | null;
   /** ISO release or first air date, used for upcoming and new-release updates */

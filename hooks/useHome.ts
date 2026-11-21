@@ -14,6 +14,13 @@ interface Home {
 }
 
 const EMPTY = { trending: [], upcoming: [], series: [] };
+/** Slides in the hero carousel */
+const HERO = 4;
+const HERO_WAIT = 2500;
+
+const wait = (ms: number) => new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
+const upgrade = (list: Title[], full: (Title | null)[]) =>
+  list.map((t) => full.find((detail) => detail?.id === t.id) ?? t);
 
 /** Home feed: trending this week, upcoming movies and popular series. */
 export function useHome(reloadKey = 0): Home {
@@ -30,21 +37,27 @@ export function useHome(reloadKey = 0): Home {
     let live = true;
     setState((s) => ({ ...s, loading: true, failed: false }));
     loadHome(reloadKey > 0)
-      .then((data) => {
-        if (!live) return;
-        setState({ ...data, loading: false, failed: false, configured });
-        // The hero shows title logos, which only come with the full detail
-        Promise.all(data.trending.slice(0, 5).map((t) => loadDetail(t.id).catch(() => null))).then(
-          (full) => {
-            if (!live) return;
-            setState((current) => ({
-              ...current,
-              trending: current.trending.map(
-                (t) => full.find((detail) => detail?.id === t.id) ?? t
-              ),
-            }));
-          }
+      .then(async (data) => {
+        // The hero needs title logos and textless art, which only come with the full detail.
+        // Wait for them, briefly, so Home appears finished instead of changing under the eye.
+        const details = Promise.all(
+          data.trending.slice(0, HERO).map((t) => loadDetail(t.id).catch(() => null))
         );
+        const early = await Promise.race([details, wait(HERO_WAIT)]);
+        if (!live) return;
+        setState({
+          ...data,
+          trending: upgrade(data.trending, early ?? []),
+          loading: false,
+          failed: false,
+          configured,
+        });
+        // Slow connection: the details still land, the hero just upgrades when they do
+        if (!early) {
+          details.then((full) => {
+            if (live) setState((s) => ({ ...s, trending: upgrade(s.trending, full) }));
+          });
+        }
       })
       .catch(() => {
         if (live) setState({ ...EMPTY, loading: false, failed: true, configured });

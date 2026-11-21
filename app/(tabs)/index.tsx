@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, View, type ViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -26,13 +26,19 @@ import { useApp } from '@/store/store';
 import type { Title } from '@/types';
 
 const key = (t: Title) => t.id;
+const renderRing = (t: Title) => <Ring title={t} onPress={playTrailer} />;
+const playTrailer = (t: Title) => {
+  openTrailer(t);
+};
 const EYEBROWS = ['No. 1 this week', 'Trending now', 'Trending now', 'Popular this week'];
 
 export default function Home() {
   const router = useRouter();
   const { top } = useSafeAreaInsets();
   const openTitle = useOpenTitle();
-  const saved = useApp((s) => s.saved);
+  // Only the newest save is read here. Each hero slide watches its own saved flag, so saving
+  // a title re-renders that button and nothing else.
+  const lastSavedId = useApp((s) => s.saved[0] ?? '');
   const watching = useApp((s) => s.watching);
   const updatesRead = useApp((s) => s.updatesRead);
   const toggleSave = useApp((s) => s.toggleSave);
@@ -40,7 +46,6 @@ export default function Home() {
   const [reload, setReload] = useState(0);
   const home = useHome(reload);
   const updates = useUpdates();
-  const [seen, setSeen] = useState<string[]>([]);
 
   const slides = useMemo(
     () =>
@@ -49,17 +54,31 @@ export default function Home() {
         .map((title, i) => ({ title, eyebrow: EYEBROWS[i] ?? 'Trending now' })),
     [home.trending]
   );
-  const rings = home.trending.slice(0, 8);
-  const topTen = home.trending.slice(0, 10);
+  const rings = useMemo(() => home.trending.slice(0, 8), [home.trending]);
+  const topTen = useMemo(() => home.trending.slice(0, 10), [home.trending]);
   const { titles: resume } = useTitles(watching);
 
   // The most recent save, with its own detail so its related titles can be listed
-  const { title: lastSaved } = useTitle(saved[0] ?? '');
+  const { title: lastSaved } = useTitle(lastSavedId);
   const { titles: becauseSaved } = useTitles(lastSaved?.related ?? []);
 
-  const trailer = (t: Title) => {
-    openTrailer(t);
-  };
+  // Stable, so the carousel and every poster skip re-rendering when Home does
+  const openHero = useCallback(
+    (t: Title, art: ViewInstance | null) => openTitle(t, art, 'hero'),
+    [openTitle]
+  );
+  const renderTop = useCallback(
+    (t: Title, i: number) => <Top10Card rank={i + 1} title={t} onPress={openTitle} />,
+    [openTitle]
+  );
+  const renderPoster = useCallback(
+    (t: Title) => <Poster title={t} onPress={openTitle} />,
+    [openTitle]
+  );
+  const renderUpcoming = useCallback(
+    (t: Title) => <Poster title={t} date={t.released.slice(0, 6)} onPress={openTitle} />,
+    [openTitle]
+  );
   const unread = !updatesRead && updates.count > 0;
 
   return (
@@ -85,85 +104,47 @@ export default function Home() {
             <>
               <HeroCarousel
                 slides={slides}
-                saved={(id) => saved.includes(id)}
                 onToggleSave={toggleSave}
-                onOpen={(t, art) => openTitle(t, art, 0)}
-                onTrailer={trailer}
+                onOpen={openHero}
+                onTrailer={playTrailer}
               />
 
               <View className="pt-6">
-                <Rail
-                  data={rings}
-                  keyExtractor={key}
-                  gap={8}
-                  renderItem={(t) => (
-                    <Ring
-                      title={t}
-                      seen={seen.includes(t.id)}
-                      onPress={(next) => {
-                        setSeen((s) => [...s, next.id]);
-                        trailer(next);
-                      }}
-                    />
-                  )}
-                />
+                <Rail data={rings} keyExtractor={key} gap={8} renderItem={renderRing} />
               </View>
 
               {resume.length ? (
                 <>
                   <SectionHeader title="Continue watching" />
-                  <Rail
-                    data={resume}
-                    keyExtractor={key}
-                    renderItem={(t) => <Poster title={t} onPress={openTitle} />}
-                  />
+                  <Rail data={resume} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
 
               {topTen.length ? (
                 <>
                   <SectionHeader title="Top 10 this week" />
-                  <Rail
-                    data={topTen}
-                    keyExtractor={key}
-                    gap={4}
-                    renderItem={(t, i) => <Top10Card rank={i + 1} title={t} onPress={openTitle} />}
-                  />
+                  <Rail data={topTen} keyExtractor={key} gap={4} renderItem={renderTop} />
                 </>
               ) : null}
 
               {lastSaved && becauseSaved.length ? (
                 <>
                   <SectionHeader title={`Because you saved ${lastSaved.name}`} />
-                  <Rail
-                    data={becauseSaved}
-                    keyExtractor={key}
-                    renderItem={(t) => <Poster title={t} onPress={openTitle} />}
-                  />
+                  <Rail data={becauseSaved} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
 
               {home.upcoming.length ? (
                 <>
                   <SectionHeader title="Coming soon" />
-                  <Rail
-                    data={home.upcoming}
-                    keyExtractor={key}
-                    renderItem={(t) => (
-                      <Poster title={t} date={t.released.slice(0, 6)} onPress={openTitle} />
-                    )}
-                  />
+                  <Rail data={home.upcoming} keyExtractor={key} renderItem={renderUpcoming} />
                 </>
               ) : null}
 
               {home.series.length ? (
                 <>
                   <SectionHeader title="Popular series" />
-                  <Rail
-                    data={home.series}
-                    keyExtractor={key}
-                    renderItem={(t) => <Poster title={t} onPress={openTitle} />}
-                  />
+                  <Rail data={home.series} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
               <View className="h-10" />

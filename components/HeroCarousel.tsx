@@ -1,8 +1,8 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { Text, View, useWindowDimensions, type ViewInstance } from 'react-native';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Animated, {
-  FadeInDown,
+  Extrapolation,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -19,7 +19,7 @@ import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { heroHeightFor } from '@/lib/flight';
 import { genreLine } from '@/lib/format';
-import { ease } from '@/lib/motion';
+import { useIsSaved } from '@/store/store';
 import type { Title } from '@/types';
 
 export interface HeroSlide {
@@ -29,7 +29,6 @@ export interface HeroSlide {
 
 interface HeroCarouselProps {
   slides: HeroSlide[];
-  saved: (id: string) => boolean;
   onToggleSave: (id: string) => void;
   onOpen: (title: Title, art: ViewInstance | null) => void;
   onTrailer: (title: Title) => void;
@@ -39,11 +38,14 @@ interface HeroCarouselProps {
 
 /**
  * Full-bleed hero that never runs out. The slides are laid out three times in a row and the
- * list quietly jumps back to the middle copy, so it always keeps moving forward.
+ * list quietly jumps back to the middle copy, so it always keeps moving forward. Every copy
+ * stays mounted (a handful of views), so the jump never lands on a slide that has not rendered.
+ *
+ * Nothing here is React state. The scroll position is one shared value, and the page dots, the
+ * artwork drift and the rise of each line of text are all read from it on the UI thread.
  */
 export function HeroCarousel({
   slides,
-  saved,
   onToggleSave,
   onOpen,
   onTrailer,
@@ -54,44 +56,54 @@ export function HeroCarousel({
   const n = slides.length;
   const looped = useMemo(() => [...slides, ...slides, ...slides], [slides]);
   const list = useRef<Animated.FlatList<HeroSlide>>(null);
-  /** Position in the tripled list */
-  const raw = useRef(n);
-  const [index, setIndex] = useState(0);
   const touching = useRef(false);
   const scrollX = useSharedValue(n * width);
   const onScroll = useAnimatedScrollHandler((e) => {
     scrollX.value = e.contentOffset.x;
   });
 
-  const settle = useCallback(
-    (position: number) => {
-      raw.current = position;
-      setIndex(position % n);
-      // Past the first or last copy: jump to the same slide in the middle copy, no animation
-      if (position < n || position >= n * 2) {
-        const middle = (position % n) + n;
-        raw.current = middle;
-        list.current?.scrollToIndex({ index: middle, animated: false });
-      }
-    },
-    [n]
+  // Auto-advance only while Home is on screen: not under a detail, not on another tab
+  useFocusEffect(
+    useCallback(() => {
+      if (!interval || n < 2) return;
+      const id = setInterval(() => {
+        if (touching.current) return;
+        const at = Math.round(scrollX.value / width);
+        list.current?.scrollToIndex({ index: Math.min(at + 1, n * 3 - 1), animated: true });
+      }, interval);
+      return () => clearInterval(id);
+    }, [interval, n, width, scrollX])
   );
 
-  useEffect(() => {
-    if (!interval || n < 2) return;
-    const id = setInterval(() => {
-      if (touching.current) return;
-      list.current?.scrollToIndex({ index: raw.current + 1, animated: true });
-    }, interval);
-    return () => clearInterval(id);
-  }, [interval, n]);
+  const onEnd = useCallback(
+    (offset: number) => {
+      touching.current = false;
+      const at = Math.round(offset / width);
+      // Past the first or last copy: jump to the same slide in the middle copy, no animation
+      if (at < n || at >= n * 2) {
+        list.current?.scrollToOffset({ offset: ((at % n) + n) * width, animated: false });
+      }
+    },
+    [n, width]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: HeroSlide; index: number }) => (
+      <Slide
+        item={item}
+        i={index}
+        width={width}
+        height={height}
+        scrollX={scrollX}
+        onToggleSave={onToggleSave}
+        onOpen={onOpen}
+        onTrailer={onTrailer}
+      />
+    ),
+    [width, height, scrollX, onToggleSave, onOpen, onTrailer]
+  );
 
   if (!n) return <View style={{ height }} />;
-
-  const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    touching.current = false;
-    settle(Math.round(e.nativeEvent.contentOffset.x / width));
-  };
 
   return (
     <View style={{ height }}>
@@ -100,45 +112,56 @@ export function HeroCarousel({
         horizontal
         pagingEnabled
         data={looped}
-        keyExtractor={(s, i) => `${i}-${s.title.id}`}
+        keyExtractor={keyOf}
         initialScrollIndex={n}
         showsHorizontalScrollIndicator={false}
         getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        initialNumToRender={3}
-        windowSize={3}
+        initialNumToRender={looped.length}
+        windowSize={looped.length + 1}
+        removeClippedSubviews={false}
         onScrollBeginDrag={() => {
           touching.current = true;
         }}
-        onMomentumScrollEnd={onEnd}
-        renderItem={({ item, index: i }) => (
-          <Slide
-            item={item}
-            i={i}
-            width={width}
-            height={height}
-            scrollX={scrollX}
-            on={i % n === index}
-            saved={saved(item.title.id)}
-            onToggleSave={onToggleSave}
-            onOpen={(art) => onOpen(item.title, art)}
-            onTrailer={() => onTrailer(item.title)}
-          />
-        )}
+        onMomentumScrollEnd={(e) => onEnd(e.nativeEvent.contentOffset.x)}
+        renderItem={renderItem}
       />
       <View
         pointerEvents="none"
         className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1.5">
         {slides.map((s, i) => (
-          <View
-            key={s.title.id}
-            className={`h-1.5 rounded-full ${i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/35'}`}
-          />
+          <Dot key={s.title.id} i={i} n={n} width={width} scrollX={scrollX} />
         ))}
       </View>
     </View>
   );
+}
+
+const keyOf = (s: HeroSlide, i: number) => `${i}-${s.title.id}`;
+
+/** Page dot that widens as its slide comes to the middle, including across the loop seam */
+function Dot({
+  i,
+  n,
+  width,
+  scrollX,
+}: {
+  i: number;
+  n: number;
+  width: number;
+  scrollX: SharedValue<number>;
+}) {
+  const style = useAnimatedStyle(() => {
+    const pos = scrollX.value / width;
+    const raw = Math.abs((((pos % n) + n) % n) - i);
+    const d = Math.min(raw, n - raw);
+    return {
+      width: interpolate(d, [0, 1], [16, 6], Extrapolation.CLAMP),
+      opacity: interpolate(d, [0, 1], [1, 0.35], Extrapolation.CLAMP),
+    };
+  });
+  return <Animated.View className="h-1.5 rounded-full bg-white" style={style} />;
 }
 
 interface SlideProps {
@@ -147,19 +170,22 @@ interface SlideProps {
   width: number;
   height: number;
   scrollX: SharedValue<number>;
-  /** The slide currently centred: its text rises in, one line after another */
-  on: boolean;
-  saved: boolean;
   onToggleSave: (id: string) => void;
-  onOpen: (art: ViewInstance | null) => void;
-  onTrailer: () => void;
+  onOpen: (title: Title, art: ViewInstance | null) => void;
+  onTrailer: (title: Title) => void;
 }
 
-/** Rise used for every line of hero text: same offset and 70ms step as the HTML design. */
-const rise = (k: number) =>
-  FadeInDown.delay(120 + k * 70)
-    .duration(640)
-    .easing(ease);
+/** Rises line by line as its slide arrives: line k starts a little later than line k - 1 */
+const useRise = (scrollX: SharedValue<number>, i: number, width: number, k: number) =>
+  useAnimatedStyle(() => {
+    // 1 when this slide is centred, 0 when it is a full page away
+    const q = 1 - Math.min(Math.abs(scrollX.value - i * width) / width, 1);
+    const from = 0.45 + k * 0.07;
+    return {
+      opacity: interpolate(q, [from, 0.95], [0, 1], Extrapolation.CLAMP),
+      transform: [{ translateY: interpolate(q, [from, 0.95], [18, 0], Extrapolation.CLAMP) }],
+    };
+  });
 
 const Slide = memo(function Slide({
   item,
@@ -167,17 +193,16 @@ const Slide = memo(function Slide({
   width,
   height,
   scrollX,
-  on,
-  saved,
   onToggleSave,
   onOpen,
   onTrailer,
 }: SlideProps) {
   const art = useRef<ViewInstance>(null);
   const { title } = item;
+  const saved = useIsSaved(title.id);
 
-  // Artwork drifts slower than the page and the text fades out before it leaves, which reads as
-  // the cross-fade of the HTML hero while the carousel keeps its swipe
+  // Artwork drifts slower than the page, which reads as the cross-fade of the HTML hero
+  // while the carousel keeps its swipe
   const artStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -189,13 +214,13 @@ const Slide = memo(function Slide({
       },
     ],
   }));
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollX.value,
-      [(i - 0.6) * width, i * width, (i + 0.6) * width],
-      [0, 1, 0]
-    ),
-  }));
+  const r0 = useRise(scrollX, i, width, 0);
+  const r1 = useRise(scrollX, i, width, 1);
+  const r2 = useRise(scrollX, i, width, 2);
+  const r3 = useRise(scrollX, i, width, 3);
+  const r4 = useRise(scrollX, i, width, 4);
+
+  const open = () => onOpen(title, art.current);
 
   return (
     <View style={{ width, height, overflow: 'hidden' }}>
@@ -203,6 +228,7 @@ const Slide = memo(function Slide({
         <PosterArt
           title={title}
           textless
+          placeholder
           width={width}
           height={height}
           radius={0}
@@ -211,79 +237,57 @@ const Slide = memo(function Slide({
         />
       </Animated.View>
       <Fade />
-      <Animated.View
+      <View
         pointerEvents="box-none"
-        style={[
-          {
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 34,
-            alignItems: 'center',
-            paddingHorizontal: 20,
-          },
-          textStyle,
-        ]}>
-        {on ? (
-          <>
-            <Animated.Text
-              key={`e-${i}`}
-              entering={rise(0)}
-              className="text-eyebrow font-semibold uppercase text-t2">
-              {item.eyebrow}
-            </Animated.Text>
-            <Animated.View key={`l-${i}`} entering={rise(1)} className="w-full">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${title.name}`}
-                onPress={() => onOpen(art.current)}
-                className="mt-3 w-full items-center justify-center"
-                style={{ minHeight: 64 }}>
-                <TitleLogo title={title} maxWidth={width * 0.78} maxHeight={96} fontSize={42} />
-              </Pressable>
-            </Animated.View>
-            <Animated.View
-              key={`m-${i}`}
-              entering={rise(2)}
-              className="mt-2 flex-row items-center gap-2.5">
-              <View className="flex-row items-center gap-1">
-                <Icon name="star" size={12} />
-                <Text className="text-[13px] font-semibold text-white">
-                  {title.score.toFixed(1)}
-                </Text>
-              </View>
-              {title.runtime ? <Text className="text-[13px] text-t2">{title.runtime}</Text> : null}
-              {title.rating ? (
-                <View className="rounded border border-white/30 px-1.5 py-px">
-                  <Text className="text-[10.5px] font-semibold text-t2">{title.rating}</Text>
-                </View>
-              ) : null}
-            </Animated.View>
-            <Animated.Text key={`g-${i}`} entering={rise(3)} className="mt-1 text-[13px] text-t2">
-              {genreLine(title, 2)}
-            </Animated.Text>
-            <Animated.View
-              key={`a-${i}`}
-              entering={rise(4)}
-              className="mt-5 flex-row items-center gap-3">
-              <CircleButton
-                label={saved ? 'Remove from list' : 'Save to list'}
-                active={saved}
-                onPress={() => onToggleSave(title.id)}>
-                <Icon
-                  name={saved ? 'check' : 'plus'}
-                  size={20}
-                  color={saved ? '#0B0B0A' : '#fff'}
-                />
-              </CircleButton>
-              <Pill title="Watch trailer" icon="play" onPress={onTrailer} />
-              <CircleButton label="Details" onPress={() => onOpen(art.current)}>
-                <Icon name="info" size={20} />
-              </CircleButton>
-            </Animated.View>
-          </>
-        ) : null}
-      </Animated.View>
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 34,
+          alignItems: 'center',
+          paddingHorizontal: 20,
+        }}>
+        <Animated.Text style={r0} className="text-eyebrow font-semibold uppercase text-t2">
+          {item.eyebrow}
+        </Animated.Text>
+        <Animated.View style={r1} className="w-full">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${title.name}`}
+            onPress={open}
+            className="mt-3 w-full items-center justify-center"
+            style={{ minHeight: 64 }}>
+            <TitleLogo title={title} maxWidth={width * 0.78} maxHeight={96} fontSize={42} />
+          </Pressable>
+        </Animated.View>
+        <Animated.View style={r2} className="mt-2 flex-row items-center gap-2.5">
+          <View className="flex-row items-center gap-1">
+            <Icon name="star" size={12} />
+            <Text className="text-[13px] font-semibold text-white">{title.score.toFixed(1)}</Text>
+          </View>
+          {title.runtime ? <Text className="text-[13px] text-t2">{title.runtime}</Text> : null}
+          {title.rating ? (
+            <View className="rounded border border-white/30 px-1.5 py-px">
+              <Text className="text-[10.5px] font-semibold text-t2">{title.rating}</Text>
+            </View>
+          ) : null}
+        </Animated.View>
+        <Animated.Text style={r3} className="mt-1 text-[13px] text-t2">
+          {genreLine(title, 2)}
+        </Animated.Text>
+        <Animated.View style={r4} className="mt-5 flex-row items-center gap-3">
+          <CircleButton
+            label={saved ? 'Remove from list' : 'Save to list'}
+            active={saved}
+            onPress={() => onToggleSave(title.id)}>
+            <Icon name={saved ? 'check' : 'plus'} size={20} color={saved ? '#0B0B0A' : '#fff'} />
+          </CircleButton>
+          <Pill title="Watch trailer" icon="play" onPress={() => onTrailer(title)} />
+          <CircleButton label="Details" onPress={open}>
+            <Icon name="info" size={20} />
+          </CircleButton>
+        </Animated.View>
+      </View>
     </View>
   );
 });

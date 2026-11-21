@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useCallback, type ReactElement } from 'react';
 import { FlatList } from 'react-native';
 
 import { Reveal } from '@/components/Reveal';
@@ -10,16 +10,28 @@ interface RailProps<T> {
   gap?: number;
 }
 
-/** Horizontal rail with 20pt gutters. Items rise in one after another. */
+const GUTTER = { paddingHorizontal: 20 } as const;
+
+/** Horizontal rail with 20pt gutters. The first screenful of items rises in one after another. */
 export function Rail<T>({ data, keyExtractor, renderItem, gap = 12 }: RailProps<T>) {
+  const render = useCallback(
+    ({ item, index }: { item: T; index: number }) =>
+      // Items scrolled in later appear plainly: replaying an entrance while swiping looks noisy
+      index < 6 ? (
+        <Reveal index={index}>{renderItem(item, index)}</Reveal>
+      ) : (
+        renderItem(item, index)
+      ),
+    [renderItem]
+  );
   return (
     <FlatList
       horizontal
       data={data}
       keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 20, gap }}
-      renderItem={({ item, index }) => <Reveal index={index}>{renderItem(item, index)}</Reveal>}
+      contentContainerStyle={{ ...GUTTER, gap }}
+      renderItem={render}
     />
   );
 }

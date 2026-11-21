@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { ComponentProps } from 'react';
-import { Pressable as RNPressable, View } from 'react-native';
+import { Pressable as RNPressable } from 'react-native';
 import { Tabs } from 'expo-router';
 import Animated, {
   Easing,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import colors from '@/constants/colors';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { useTabCover } from '@/lib/flight';
 import { springs } from '@/lib/motion';
 
 const tabEase = Easing.bezier(0.2, 0.8, 0.2, 1);
@@ -95,11 +96,18 @@ function TabItem({
 /** Flat docked tab bar. The active tab is a white capsule that springs open. */
 export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { bottom } = useSafeAreaInsets();
+  const cover = useTabCover();
+  const padBottom = Math.max(bottom, 12);
+  // A title page opening over the tabs slides the bar away instead of dimming it
+  const away = useAnimatedStyle(() => ({
+    opacity: 1 - cover.value,
+    transform: [{ translateY: cover.value * (72 + padBottom) }],
+  }));
 
   return (
-    <View
+    <Animated.View
       className="flex-row gap-1.5 border-t border-s3 bg-ink px-3.5 pt-2.5"
-      style={{ paddingBottom: Math.max(bottom, 12) }}>
+      style={[{ paddingBottom: padBottom }, away]}>
       {state.routes.map((route, i) => {
         const meta = TABS[route.name];
         if (!meta) return null;
@@ -121,6 +129,6 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
           />
         );
       })}
-    </View>
+    </Animated.View>
   );
 }

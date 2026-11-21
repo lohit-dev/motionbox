@@ -110,7 +110,7 @@ const episodeAir = (e?: RawEpisodeAir | null) =>
 /** Extra fields on a TMDB movie or tv detail call made with append_to_response. */
 export interface TmdbDetail extends TmdbResult {
   images?: {
-    logos?: { file_path: string; iso_639_1: string | null }[];
+    logos?: { file_path: string; iso_639_1: string | null; aspect_ratio?: number }[];
     posters?: { file_path: string; iso_639_1: string | null; vote_average: number }[];
   };
   genres?: { id: number; name: string }[];
@@ -179,6 +179,9 @@ export function mapDetail(
   kind: 'movie' | 'tv'
 ): { title: Title; similar: Title[] } {
   const base = mapResult(raw, 0, kind)!;
+  const logos = raw.images?.logos ?? [];
+  const logo =
+    logos.find((l) => l.iso_639_1 === 'en') ?? logos.find((l) => l.iso_639_1 === null) ?? logos[0];
   const similar = (raw.similar?.results ?? [])
     .slice(0, 12)
     .map((r, i) => mapResult(r, i, kind))
@@ -237,11 +240,8 @@ export function mapDetail(
       [...(raw.images?.posters ?? [])]
         .filter((x) => x.iso_639_1 === null)
         .sort((a, b) => b.vote_average - a.vote_average)[0]?.file_path ?? null,
-    logoPath:
-      raw.images?.logos?.find((logo) => logo.iso_639_1 === 'en')?.file_path ??
-      raw.images?.logos?.find((logo) => logo.iso_639_1 === null)?.file_path ??
-      raw.images?.logos?.[0]?.file_path ??
-      null,
+    logoPath: logo?.file_path ?? null,
+    logoRatio: logo?.aspect_ratio ?? null,
     cast: (raw.credits?.cast ?? []).slice(0, 14).map((c) => ({
       id: c.id,
       name: c.name,

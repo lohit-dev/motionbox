@@ -1,3 +1,4 @@
+import { memo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { PosterArt } from '@/components/PosterArt';
@@ -6,18 +7,21 @@ import type { Title } from '@/types';
 
 interface RingProps {
   title: Title;
-  seen?: boolean;
   onPress?: (title: Title) => void;
 }
 
 /** Story ring: white outline while there is something new, grey once seen. */
-export function Ring({ title, seen = false, onPress }: RingProps) {
+export const Ring = memo(function Ring({ title, onPress }: RingProps) {
+  const [seen, setSeen] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title.name} trailer`}
       scale={0.92}
-      onPress={() => onPress?.(title)}
+      onPress={() => {
+        setSeen(true);
+        onPress?.(title);
+      }}
       className="items-center"
       style={{ width: 72 }}>
       <View
@@ -30,4 +34,4 @@ export function Ring({ title, seen = false, onPress }: RingProps) {
       </Text>
     </Pressable>
   );
-}
+});

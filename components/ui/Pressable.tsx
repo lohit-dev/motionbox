@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Pressable as RNPressable, type PressableProps } from 'react-native';
 
 interface Props extends Omit<PressableProps, 'style'> {
@@ -10,24 +9,14 @@ interface Props extends Omit<PressableProps, 'style'> {
 
 /**
  * Pressable that shrinks slightly under the finger.
- * className goes straight to the core Pressable so NativeWind always resolves it;
- * the press scale is plain state rather than an animated wrapper.
+ * className goes straight to the core Pressable so NativeWind always resolves it. The pressed
+ * state lives inside the core Pressable, so pressing never re-renders the screen around it.
  */
-export function Pressable({ scale = 0.96, style, onPressIn, onPressOut, ...rest }: Props) {
-  const [down, setDown] = useState(false);
-
+export function Pressable({ scale = 0.96, style, ...rest }: Props) {
   return (
     <RNPressable
       {...rest}
-      onPressIn={(e) => {
-        setDown(true);
-        onPressIn?.(e);
-      }}
-      onPressOut={(e) => {
-        setDown(false);
-        onPressOut?.(e);
-      }}
-      style={[style, down ? { transform: [{ scale }] } : null]}
+      style={({ pressed }) => [style, pressed ? { transform: [{ scale }] } : null]}
     />
   );
 }

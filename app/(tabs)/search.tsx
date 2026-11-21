@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -87,12 +87,18 @@ export default function Search() {
     if (next !== 'people') setFilters({ ...filters, kind: next === 'all' ? 'all' : next });
   };
 
+  // Read through a ref: depending on `text` would hand every poster a new callback on each
+  // keystroke and re-render the whole grid
+  const typed = useRef(text);
+  useEffect(() => {
+    typed.current = text;
+  });
   const openResult = useCallback(
     (t: Title, art: ViewInstance | null) => {
-      addRecent(text);
+      addRecent(typed.current);
       open(t, art);
     },
-    [addRecent, open, text]
+    [addRecent, open]
   );
 
   if (!hasTmdb()) {
