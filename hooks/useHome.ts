@@ -6,6 +6,7 @@ import type { Title } from '@/types';
 interface Home {
   trending: Title[];
   upcoming: Title[];
+  fresh: Title[];
   series: Title[];
   loading: boolean;
   failed: boolean;
@@ -13,7 +14,7 @@ interface Home {
   configured: boolean;
 }
 
-const EMPTY = { trending: [], upcoming: [], series: [] };
+const EMPTY = { trending: [], upcoming: [], fresh: [], series: [] };
 /** Slides in the hero carousel */
 const HERO = 4;
 const HERO_WAIT = 2500;
@@ -22,7 +23,7 @@ const wait = (ms: number) => new Promise<null>((resolve) => setTimeout(() => res
 const upgrade = (list: Title[], full: (Title | null)[]) =>
   list.map((t) => full.find((detail) => detail?.id === t.id) ?? t);
 
-/** Home feed: trending this week, upcoming movies and popular series. */
+/** Home feed: trending this week, upcoming and in-cinema movies, and popular series. */
 export function useHome(reloadKey = 0): Home {
   const configured = hasTmdb();
   const [state, setState] = useState<Home>({

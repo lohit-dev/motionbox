@@ -10,7 +10,7 @@ interface RailProps<T> {
   gap?: number;
 }
 
-const GUTTER = { paddingHorizontal: 20 } as const;
+const GUTTER = { paddingHorizontal: 20, alignItems: 'flex-start' } as const;
 
 /** Horizontal rail with 20pt gutters. The first screenful of items rises in one after another. */
 export function Rail<T>({ data, keyExtractor, renderItem, gap = 12 }: RailProps<T>) {

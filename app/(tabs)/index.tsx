@@ -53,7 +53,11 @@ export default function Home() {
         .map((title, i) => ({ title, eyebrow: EYEBROWS[i] ?? 'Trending now' })),
     [home.trending]
   );
-  const rings = useMemo(() => home.trending.slice(0, 8), [home.trending]);
+  // Fresh trailers come from what's in cinemas now, and never repeat a hero slide
+  const rings = useMemo(() => {
+    const inHero = new Set(slides.map((s) => s.title.id));
+    return home.fresh.filter((t) => !inHero.has(t.id)).slice(0, 10);
+  }, [home.fresh, slides]);
   const topTen = useMemo(() => home.trending.slice(0, 10), [home.trending]);
   const { titles: resume } = useTitles(watching);
 
@@ -75,12 +79,24 @@ export default function Home() {
   );
   const unread = !updatesRead && updates.count > 0;
 
+  // "See all" opens the row as a grid. The ids go in the route, the titles are already cached.
+  const seeAll = (title: string, titles: Title[], dates = false) =>
+    router.push({
+      pathname: '/all',
+      params: { title, ids: titles.map((t) => t.id).join(','), ...(dates ? { dates: '1' } : {}) },
+    });
+
   return (
     <View className="flex-1 bg-ink">
       {!home.configured ? (
         <NeedsKey />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never">
+        // No rubber band at the top: pulling down would only open a black gap above the hero
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
+          bounces={false}
+          overScrollMode="never">
           {home.loading ? (
             <View style={{ paddingTop: top + 60 }}>
               <Skeleton height={420} radius={0} />
@@ -103,41 +119,62 @@ export default function Home() {
                 onTrailer={playTrailer}
               />
 
-              <View className="pt-6">
-                <Rail data={rings} keyExtractor={key} gap={8} renderItem={renderRing} />
-              </View>
+              {rings.length ? (
+                <>
+                  <SectionHeader
+                    title="Fresh trailers"
+                    onAction={() => seeAll('Fresh trailers', home.fresh)}
+                  />
+                  <Rail data={rings} keyExtractor={key} gap={8} renderItem={renderRing} />
+                </>
+              ) : null}
 
               {resume.length ? (
                 <>
-                  <SectionHeader title="Continue watching" />
+                  <SectionHeader
+                    title="Continue watching"
+                    onAction={() => seeAll('Continue watching', resume)}
+                  />
                   <Rail data={resume} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
 
               {topTen.length ? (
                 <>
-                  <SectionHeader title="Top 10 this week" />
+                  <SectionHeader
+                    title="Top 10 this week"
+                    onAction={() => seeAll('Top 10 this week', topTen)}
+                  />
                   <Rail data={topTen} keyExtractor={key} gap={4} renderItem={renderTop} />
                 </>
               ) : null}
 
               {lastSaved && becauseSaved.length ? (
                 <>
-                  <SectionHeader title={`Because you saved ${lastSaved.name}`} />
+                  <SectionHeader
+                    title={`Because you saved ${lastSaved.name}`}
+                    onAction={() => seeAll(`Because you saved ${lastSaved.name}`, becauseSaved)}
+                  />
                   <Rail data={becauseSaved} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
 
               {home.upcoming.length ? (
                 <>
-                  <SectionHeader title="Coming soon" />
+                  <SectionHeader
+                    title="Coming soon"
+                    onAction={() => seeAll('Coming soon', home.upcoming, true)}
+                  />
                   <Rail data={home.upcoming} keyExtractor={key} renderItem={renderUpcoming} />
                 </>
               ) : null}
 
               {home.series.length ? (
                 <>
-                  <SectionHeader title="Popular series" />
+                  <SectionHeader
+                    title="Popular series"
+                    onAction={() => seeAll('Popular series', home.series)}
+                  />
                   <Rail data={home.series} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}

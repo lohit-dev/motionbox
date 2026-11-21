@@ -105,15 +105,38 @@ export function loadPerson(id: number) {
   return hit;
 }
 
+/** yyyy-mm-dd on this phone's calendar, `days` from today */
+function day(days = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 async function fetchHome() {
-  const [trending, upcoming, series] = await Promise.all([
+  const today = day();
+  const [trending, upcoming, fresh, series] = await Promise.all([
     tmdb<Page<TmdbResult>>(endpoints.trendingWeek),
-    tmdb<Page<TmdbResult>>(endpoints.upcomingMovies),
+    // TMDB's own "upcoming" list keeps releases that are already out, so ask for what is still
+    // to come: from today onwards, the most popular first, then put them in release order
+    tmdb<Page<TmdbResult>>(endpoints.discoverMovies, {
+      sort_by: 'popularity.desc',
+      'primary_release_date.gte': today,
+      'primary_release_date.lte': day(270),
+      with_release_type: '2|3',
+    }),
+    tmdb<Page<TmdbResult>>(endpoints.nowPlaying),
     tmdb<Page<TmdbResult>>(endpoints.popularSeries),
   ]);
+  const comingSoon = upcoming.results
+    .filter((r) => (r.release_date ?? '') >= today)
+    .sort((a, b) => (a.release_date ?? '').localeCompare(b.release_date ?? ''))
+    .slice(0, 20);
   return {
     trending: list(trending.results, 'movie'),
-    upcoming: list(upcoming.results, 'movie'),
+    upcoming: list(comingSoon, 'movie'),
+    // In cinemas now: a different set from the hero, which is what's trending
+    fresh: list(fresh.results, 'movie'),
     series: list(series.results, 'tv'),
   };
 }

@@ -49,6 +49,8 @@ export const endpoints = {
   popularMovies: '/movie/popular',
   popularSeries: '/tv/popular',
   upcomingMovies: '/movie/upcoming',
+  nowPlaying: '/movie/now_playing',
+  discoverMovies: '/discover/movie',
   airingToday: '/tv/airing_today',
   search: '/search/multi',
   movie: (id: number | string) => `/movie/${id}`,

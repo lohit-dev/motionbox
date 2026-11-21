@@ -35,6 +35,7 @@ export default function Layout() {
             <Stack.Screen name="(tabs)" />
             {/* The card's poster flies into the hero: a native shared element transition */}
             <Stack.Screen name="title/[id]" options={{ animation: 'fade' }} />
+            <Stack.Screen name="all" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
             {/* Slides up from the bottom like an iPhone sheet; a close button replaces the back arrow */}
