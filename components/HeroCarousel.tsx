@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { memo, useCallback, useMemo, useRef } from 'react';
-import { Text, View, useWindowDimensions, type ViewInstance } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -30,7 +30,7 @@ export interface HeroSlide {
 interface HeroCarouselProps {
   slides: HeroSlide[];
   onToggleSave: (id: string) => void;
-  onOpen: (title: Title, art: ViewInstance | null) => void;
+  onOpen: (title: Title) => void;
   onTrailer: (title: Title) => void;
   /** Milliseconds between automatic slides. 0 turns auto-rotate off. */
   interval?: number;
@@ -171,7 +171,7 @@ interface SlideProps {
   height: number;
   scrollX: SharedValue<number>;
   onToggleSave: (id: string) => void;
-  onOpen: (title: Title, art: ViewInstance | null) => void;
+  onOpen: (title: Title) => void;
   onTrailer: (title: Title) => void;
 }
 
@@ -197,7 +197,6 @@ const Slide = memo(function Slide({
   onOpen,
   onTrailer,
 }: SlideProps) {
-  const art = useRef<ViewInstance>(null);
   const { title } = item;
   const saved = useIsSaved(title.id);
 
@@ -220,11 +219,11 @@ const Slide = memo(function Slide({
   const r3 = useRise(scrollX, i, width, 3);
   const r4 = useRise(scrollX, i, width, 4);
 
-  const open = () => onOpen(title, art.current);
+  const open = () => onOpen(title);
 
   return (
     <View style={{ width, height, overflow: 'hidden' }}>
-      <Animated.View ref={art} collapsable={false} style={[{ width, height }, artStyle]}>
+      <Animated.View style={[{ width, height }, artStyle]}>
         <PosterArt
           title={title}
           textless

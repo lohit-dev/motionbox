@@ -1,5 +1,6 @@
-import { memo, useRef } from 'react';
-import { Text, View, type ViewInstance } from 'react-native';
+import { memo, useId } from 'react';
+import { Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
@@ -16,8 +17,8 @@ interface PosterProps {
   date?: string;
   showScore?: boolean;
   subtitle?: string;
-  /** Receives the artwork view so the caller can fly it into the detail page */
-  onPress?: (title: Title, art: ViewInstance | null) => void;
+  /** Receives the shared transition tag of this poster, so the detail hero can take over from it */
+  onPress?: (title: Title, tag: string) => void;
 }
 
 function PosterBase({
@@ -29,16 +30,19 @@ function PosterBase({
   subtitle,
   onPress,
 }: PosterProps) {
-  const art = useRef<ViewInstance>(null);
+  // One tag per card on screen: the same title can sit in several rails at once
+  const tag = `poster-${title.id}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title.name}
       scale={0.955}
-      onPress={() => onPress?.(title, art.current)}
+      onPress={() => onPress?.(title, tag)}
       style={{ width }}>
-      <View ref={art} collapsable={false}>
-        <PosterArt title={title} width={width} height={width * 1.5} />
+      <View>
+        <Animated.View sharedTransitionTag={tag} style={{ width, height: width * 1.5 }}>
+          <PosterArt title={title} width={width} height={width * 1.5} />
+        </Animated.View>
         {showScore ? (
           <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-full bg-black/65 px-2 py-1">
             <Icon name="star" size={10} />

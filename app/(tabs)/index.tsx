@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, View, type ViewInstance } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -62,11 +62,6 @@ export default function Home() {
   const { title: lastSaved } = useTitle(lastSavedId);
   const { titles: becauseSaved } = useTitles(lastSaved?.related ?? []);
 
-  // Stable, so the carousel and every poster skip re-rendering when Home does
-  const openHero = useCallback(
-    (t: Title, art: ViewInstance | null) => openTitle(t, art, 'hero'),
-    [openTitle]
-  );
   const renderTop = useCallback(
     (t: Title, i: number) => <Top10Card rank={i + 1} title={t} onPress={openTitle} />,
     [openTitle]
@@ -105,7 +100,7 @@ export default function Home() {
               <HeroCarousel
                 slides={slides}
                 onToggleSave={toggleSave}
-                onOpen={openHero}
+                onOpen={openTitle}
                 onTrailer={playTrailer}
               />
 

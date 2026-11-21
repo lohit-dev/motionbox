@@ -1,4 +1,4 @@
-import { Text, View, type ViewInstance } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Poster } from '@/components/Poster';
 import type { Title } from '@/types';
@@ -6,7 +6,7 @@ import type { Title } from '@/types';
 interface Top10CardProps {
   rank: number;
   title: Title;
-  onPress?: (title: Title, art: ViewInstance | null) => void;
+  onPress?: (title: Title, tag: string) => void;
 }
 
 /** Big rank numeral tucked behind the left edge of the poster. */

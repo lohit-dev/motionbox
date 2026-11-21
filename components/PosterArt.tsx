@@ -26,6 +26,11 @@ interface PosterArtProps {
   placeholder?: boolean;
   /** With `placeholder`: fade the large image in. Off when something already covers it. */
   fade?: boolean;
+  /**
+   * Keep showing the card's own poster even when `textless` art exists. The detail hero holds
+   * while the poster is flying in, so the picture never changes mid-flight, then swaps.
+   */
+  hold?: boolean;
   /** Called once the artwork is on screen (immediately for generated art) */
   onReady?: () => void;
 }
@@ -117,9 +122,10 @@ function PosterArtBase({
   showName = true,
   placeholder = false,
   fade = true,
+  hold = false,
   onReady,
 }: PosterArtProps) {
-  const uri = imageUrl((textless && title.heroPath) || title.posterPath, size);
+  const uri = imageUrl((textless && !hold && title.heroPath) || title.posterPath, size);
   const base = imageUrl(title.posterPath, 'w500');
   const [loaded, setLoaded] = useState<string | null>(null);
 
@@ -143,7 +149,7 @@ function PosterArtBase({
             <FadeImage
               key={uri}
               uri={uri}
-              duration={fade ? 180 : 0}
+              duration={fade ? (textless && !hold ? 320 : 180) : 0}
               onLoad={() => {
                 setLoaded(uri);
                 onReady?.();

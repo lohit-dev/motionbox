@@ -1,16 +1,17 @@
-import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { BackHandler, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Share, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
-  FadeIn,
   interpolate,
   runOnJS,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,31 +34,19 @@ import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { useTitle, useTitles } from '@/hooks/useTitle';
 import { parseId } from '@/lib/api';
-import {
-  heroHeightFor,
-  useClaimFlight,
-  useCloseTitle,
-  useOpenTitle,
-  useReleaseFlight,
-} from '@/lib/flight';
+import { closeTitle, heroHeightFor, useOpenTitle } from '@/lib/flight';
 import { genreLine, kindLine } from '@/lib/format';
-import { springs } from '@/lib/motion';
+import { ease, springs } from '@/lib/motion';
 import { getTitle } from '@/lib/titles';
 import { openClip, openTrailer } from '@/lib/trailer';
 import { warmUpYouTube } from '@/lib/youtube';
 import { useApp, useIsSaved } from '@/store/store';
 import type { Clip } from '@/types';
 
-/** Opened without a card to fly from: a plain fade, built once */
-const PLAIN_ENTRANCE = FadeIn.duration(200);
-
 export default function TitleDetail() {
-  const { id = '' } = useLocalSearchParams<{ id: string }>();
+  const { id = '', tag } = useLocalSearchParams<{ id: string; tag?: string }>();
   const router = useRouter();
   const openTitle = useOpenTitle();
-  const closeTitle = useCloseTitle();
-  const claim = useClaimFlight();
-  const release = useReleaseFlight();
   const { width } = useWindowDimensions();
   const { top, bottom } = useSafeAreaInsets();
   const { title, loading, failed } = useTitle(id);
@@ -74,26 +63,18 @@ export default function TitleDetail() {
   const [noTrailer, setNoTrailer] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // This screen's own flight. `progress` runs 0 (the card) to 1 (this page) and drives the
-  // artwork, the page background and the entrance below, on the UI thread. Closing runs it
-  // back to 0, so open and close are the same animation in two directions.
-  const [flight] = useState(() => claim(id));
-  const { progress, landed } = flight;
-  const withFlight = !!flight.rect;
-  useEffect(() => () => release(flight), [flight, release]);
-
-  // Below-the-fold sections wait until the flight has landed, so it stays smooth
-  const [ready, setReady] = useState(!withFlight);
-  useAnimatedReaction(
-    () => progress.value >= 1,
-    (done, was) => {
-      if (done && !was) runOnJS(setReady)(true);
-    }
-  );
-  // The flying artwork hands over once this hero has painted
-  const heroPainted = useCallback(() => {
-    landed.set(1);
-  }, [landed]);
+  // The card's poster flies into the hero (shared element transition, tagged by `tag`). While
+  // it flies the hero shows that same poster and the text waits; once it has landed the
+  // textless artwork fades in and the text and heavy sections arrive.
+  const flies = !!tag;
+  const [ready, setReady] = useState(!flies);
+  const enter = useSharedValue(flies ? 0 : 1);
+  useEffect(() => {
+    if (!flies) return;
+    enter.set(withDelay(380, withTiming(1, { duration: 360, easing: ease })));
+    const t = setTimeout(() => setReady(true), 620);
+    return () => clearTimeout(t);
+  }, [flies, enter]);
 
   // Resolve YouTube's player script while the person reads the title page.
   useEffect(() => {
@@ -107,37 +88,17 @@ export default function TitleDetail() {
     },
     // Pull the page down past the top and let go to close it
     onEndDrag: (e) => {
-      if (e.contentOffset.y < -110) runOnJS(closeTitle)(id, e.contentOffset.y);
+      if (e.contentOffset.y < -110) runOnJS(closeTitle)();
     },
   });
 
-  // The system back button flies home too instead of cutting away. Only while this page is the
-  // one on top, so a sheet opened over it still gets its own back press.
-  useFocusEffect(
-    useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        closeTitle(id, scrollY.value);
-        return true;
-      });
-      return () => sub.remove();
-    }, [closeTitle, id, scrollY])
-  );
-
-  // Dark page background arrives just after the artwork starts moving and leaves as it flies home
-  const pageBgStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.1, 0.7], [0, 1], Extrapolation.CLAMP),
-  }));
   // Text and controls settle in together once the artwork is nearly there, and are gone within
   // a few frames of closing
   const settle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.55, 0.95], [0, 1], Extrapolation.CLAMP),
-    transform: [
-      { translateY: interpolate(progress.value, [0.55, 1], [18, 0], Extrapolation.CLAMP) },
-    ],
+    opacity: enter.value,
+    transform: [{ translateY: (1 - enter.value) * 18 }],
   }));
-  const barSettle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.4, 0.9], [0, 1], Extrapolation.CLAMP),
-  }));
+  const barSettle = useAnimatedStyle(() => ({ opacity: enter.value }));
 
   const heroHeight = heroHeightFor(width);
   const heroStretch = useAnimatedStyle(() => ({
@@ -256,42 +217,34 @@ export default function TitleDetail() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0,
-            backgroundColor: colors.ink,
-          },
-          pageBgStyle,
-        ]}
-      />
-      <Animated.View entering={withFlight ? undefined : PLAIN_ENTRANCE} style={{ flex: 1 }}>
+      <Animated.View style={{ flex: 1 }}>
         <Animated.ScrollView
           onScroll={onScroll}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           bounces>
           <View style={{ width: '100%', height: heroHeight }}>
-            <Animated.View style={heroStretch}>
-              <PosterArt
-                title={title}
-                textless
-                placeholder
-                fade={ready}
-                onReady={heroPainted}
-                width={width}
-                height={heroHeight}
-                radius={0}
-                size="w1280"
-                bordered={false}
-              />
+            {/* The card's poster lands on this box. It holds that same poster until it has landed */}
+            <Animated.View sharedTransitionTag={tag} style={{ width, height: heroHeight }}>
+              <Animated.View style={heroStretch}>
+                <PosterArt
+                  title={title}
+                  textless
+                  hold={!ready}
+                  placeholder
+                  width={width}
+                  height={heroHeight}
+                  radius={0}
+                  size="w1280"
+                  bordered={false}
+                />
+              </Animated.View>
+              <Animated.View
+                pointerEvents="none"
+                style={[{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }, barSettle]}>
+                <Fade />
+              </Animated.View>
             </Animated.View>
-            <Fade />
             <Animated.View
               pointerEvents="box-none"
               style={[{ position: 'absolute', left: 0, right: 0, bottom: 20 }, settle]}>
@@ -483,13 +436,7 @@ export default function TitleDetail() {
             ]}
           />
           <View className="flex-row items-center justify-between px-gutter pb-2">
-            <CircleButton
-              icon="back"
-              label="Back"
-              size={44}
-              tone="glass"
-              onPress={() => closeTitle(title.id, scrollY.value)}
-            />
+            <CircleButton icon="back" label="Back" size={44} tone="glass" onPress={closeTitle} />
             <Animated.Text
               numberOfLines={1}
               style={[

@@ -8,7 +8,6 @@ import {
   Text,
   View,
   useWindowDimensions,
-  type ViewInstance,
 } from 'react-native';
 
 import colors from '@/constants/colors';
@@ -94,9 +93,9 @@ export default function Search() {
     typed.current = text;
   });
   const openResult = useCallback(
-    (t: Title, art: ViewInstance | null) => {
+    (t: Title, tag: string) => {
       addRecent(typed.current);
-      open(t, art);
+      open(t, tag);
     },
     [addRecent, open]
   );
