@@ -1,6 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Share, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -39,6 +39,7 @@ import { closeTitle, heroHeightFor, useOpenTitle } from '@/lib/flight';
 import { genreLine, hasScore, kindLine } from '@/lib/format';
 import { ease, springs } from '@/lib/motion';
 import { getTitle } from '@/lib/titles';
+import { shareTitle } from '@/lib/share';
 import { openClip, openTrailer } from '@/lib/trailer';
 import { warmUpYouTube } from '@/lib/youtube';
 import { useApp, useIsSaved } from '@/store/store';
@@ -182,7 +183,7 @@ export default function TitleDetail() {
   const playClip = (clip: Clip) => {
     if (clip.key) openClip(clip.key);
   };
-  const share = () => Share.share({ message: `${title.name} on Motion Box` });
+  const share = () => shareTitle(title);
 
   const label = noClips ? 'No trailer yet' : 'Watch trailer';
 

@@ -115,7 +115,7 @@ function day(days = 0) {
 
 async function fetchHome() {
   const today = day();
-  const [trending, upcoming, fresh, series] = await Promise.all([
+  const [trending, upcoming, fresh, series, rated] = await Promise.all([
     tmdb<Page<TmdbResult>>(endpoints.trendingWeek),
     // TMDB's own "upcoming" list keeps releases that are already out, so ask for what is still
     // to come: from today onwards, the most popular first, then put them in release order
@@ -127,6 +127,7 @@ async function fetchHome() {
     }),
     tmdb<Page<TmdbResult>>(endpoints.nowPlaying),
     tmdb<Page<TmdbResult>>(endpoints.popularSeries),
+    tmdb<Page<TmdbResult>>(endpoints.topRated),
   ]);
   const comingSoon = upcoming.results
     .filter((r) => (r.release_date ?? '') >= today)
@@ -138,11 +139,12 @@ async function fetchHome() {
     // In cinemas now: a different set from the hero, which is what's trending
     fresh: list(fresh.results, 'movie'),
     series: list(series.results, 'tv'),
+    rated: list(rated.results, 'movie'),
   };
 }
 
 /** Home rows that "See all" can keep paging through */
-export type FeedKind = 'trending' | 'upcoming' | 'fresh' | 'series';
+export type FeedKind = 'trending' | 'upcoming' | 'fresh' | 'series' | 'rated';
 
 /** One page of a Home row, for the endless "See all" grid. Pages are 1-based. */
 export async function loadFeed(kind: FeedKind, page: number) {
@@ -154,7 +156,9 @@ export async function loadFeed(kind: FeedKind, page: number) {
         ? await tmdb<Page<TmdbResult>>(endpoints.nowPlaying, { page })
         : kind === 'series'
           ? await tmdb<Page<TmdbResult>>(endpoints.popularSeries, { page })
-          : await tmdb<Page<TmdbResult>>(endpoints.discoverMovies, {
+          : kind === 'rated'
+            ? await tmdb<Page<TmdbResult>>(endpoints.topRated, { page })
+            : await tmdb<Page<TmdbResult>>(endpoints.discoverMovies, {
               page,
               sort_by: 'popularity.desc',
               'primary_release_date.gte': today,

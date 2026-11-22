@@ -8,6 +8,7 @@ interface Home {
   upcoming: Title[];
   fresh: Title[];
   series: Title[];
+  rated: Title[];
   loading: boolean;
   failed: boolean;
   /** False when no TMDB key is configured */
@@ -18,7 +19,7 @@ interface HomeSnapshot extends Home {
   requestKey: number;
 }
 
-const EMPTY = { trending: [], upcoming: [], fresh: [], series: [] };
+const EMPTY = { trending: [], upcoming: [], fresh: [], series: [], rated: [] };
 /** Slides in the hero carousel */
 const HERO = 4;
 const HERO_WAIT = 2500;

@@ -50,6 +50,7 @@ export const endpoints = {
   popularSeries: '/tv/popular',
   upcomingMovies: '/movie/upcoming',
   nowPlaying: '/movie/now_playing',
+  topRated: '/movie/top_rated',
   discoverMovies: '/discover/movie',
   airingToday: '/tv/airing_today',
   search: '/search/multi',

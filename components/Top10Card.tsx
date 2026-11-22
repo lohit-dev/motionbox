@@ -12,8 +12,8 @@ interface Top10CardProps {
 
 const POSTER = 104;
 /** Part of the numeral that overlaps the poster's left edge */
-const TUCK = 18;
-const NUMERAL = 112;
+const TUCK = 22;
+const NUMERAL = 132;
 /** Distance from the top of the numeral box down to the digits' baseline */
 const BASELINE = Math.round(NUMERAL * 0.78);
 
@@ -23,7 +23,7 @@ const BASELINE = Math.round(NUMERAL * 0.78);
  * card is the same size and the row lines up whatever the digit count.
  */
 export function Top10Card({ rank, title, onPress }: Top10CardProps) {
-  const slot = rank >= 10 ? 118 : 72;
+  const slot = rank >= 10 ? 142 : 86;
   return (
     <View style={{ width: slot - TUCK + POSTER, paddingLeft: slot - TUCK }}>
       <Poster title={title} width={POSTER} onPress={onPress} />
@@ -33,15 +33,15 @@ export function Top10Card({ rank, title, onPress }: Top10CardProps) {
         height={BASELINE + 8}
         style={{ position: 'absolute', left: 0, top: POSTER * 1.5 - BASELINE }}>
         <SvgText
-          x={slot - 3}
+          x={slot - 4}
           y={BASELINE}
           textAnchor="end"
           fill="none"
-          stroke="rgba(255,255,255,0.7)"
-          strokeWidth={2}
+          stroke="rgba(255,255,255,0.88)"
+          strokeWidth={3.5}
           fontFamily="Inter24pt-ExtraBold"
           fontSize={NUMERAL}
-          letterSpacing={rank >= 10 ? -9 : -4}>
+          letterSpacing={rank >= 10 ? -10 : -4}>
           {String(rank)}
         </SvgText>
       </Svg>

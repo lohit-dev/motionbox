@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import colors from '@/constants/colors';
 import { LaunchSplash } from '@/components/LaunchSplash';
+import { ShareCardHost } from '@/components/ShareCardHost';
 
 const AndroidSystemBars =
   Platform.OS === 'android' && TurboModuleRegistry.get('RNEdgeToEdge')
@@ -40,6 +41,14 @@ export default function Layout() {
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen
+              name="shorts"
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+                contentStyle: { backgroundColor: '#000' },
+              }}
+            />
+            <Stack.Screen
               name="player/[key]"
               options={{
                 presentation: 'fullScreenModal',
@@ -48,6 +57,7 @@ export default function Layout() {
               }}
             />
           </Stack>
+          <ShareCardHost />
           <LaunchSplash />
         </SafeAreaProvider>
       </KeyboardProvider>

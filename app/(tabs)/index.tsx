@@ -27,7 +27,6 @@ import { useApp } from '@/store/store';
 import type { Title } from '@/types';
 
 const key = (t: Title) => t.id;
-const renderRing = (t: Title) => <Ring title={t} onPress={playTrailer} />;
 const playTrailer = (t: Title) => {
   openTrailer(t);
 };
@@ -79,6 +78,21 @@ export default function Home() {
   const renderPoster = useCallback(
     (t: Title) => <Poster title={t} onPress={openTitle} />,
     [openTitle]
+  );
+  // A ring opens the trailer shorts at that title, with every ring after it a swipe away
+  const renderRing = useCallback(
+    (t: Title, i: number) => (
+      <Ring
+        title={t}
+        onPress={() =>
+          router.push({
+            pathname: '/shorts',
+            params: { ids: rings.map((r) => r.id).join(','), start: String(i) },
+          })
+        }
+      />
+    ),
+    [rings, router]
   );
   const renderUpcoming = useCallback(
     (t: Title) => <Poster title={t} date={t.released.slice(0, 6)} onPress={openTitle} />,
@@ -187,6 +201,16 @@ export default function Home() {
                     }
                   />
                   <Rail data={home.upcoming} keyExtractor={key} renderItem={renderUpcoming} />
+                </>
+              ) : null}
+
+              {home.rated.length ? (
+                <>
+                  <SectionHeader
+                    title="Top rated"
+                    onAction={() => seeAll('Top rated', home.rated, { feed: 'rated' })}
+                  />
+                  <Rail data={home.rated} keyExtractor={key} renderItem={renderPoster} />
                 </>
               ) : null}
 
