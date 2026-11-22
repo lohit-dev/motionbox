@@ -12,3 +12,7 @@ export const registerTitles = (list: Title[]) => {
 };
 
 export const getTitle = (id: string): Title | undefined => byId[id];
+
+/** The loaded title that has this YouTube clip, so the player can show what is playing. */
+export const findByClip = (key: string): Title | undefined =>
+  Object.values(byId).find((t) => t.clips?.some((c) => c.key === key));
