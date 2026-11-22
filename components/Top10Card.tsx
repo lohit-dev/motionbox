@@ -1,7 +1,7 @@
 import { View } from 'react-native';
+import Svg, { Text as SvgText } from 'react-native-svg';
 
 import { Poster } from '@/components/Poster';
-import { Text } from '@/components/ui/Text';
 import type { Title } from '@/types';
 
 interface Top10CardProps {
@@ -11,37 +11,40 @@ interface Top10CardProps {
 }
 
 const POSTER = 104;
-/** Part of the numeral that sits behind the poster */
+/** Part of the numeral that overlaps the poster's left edge */
 const TUCK = 18;
-const NUMERAL = 118;
+const NUMERAL = 112;
+/** Distance from the top of the numeral box down to the digits' baseline */
+const BASELINE = Math.round(NUMERAL * 0.78);
 
 /**
- * Big rank numeral behind the left edge of the poster, sitting on the poster's bottom edge.
- * The numeral is positioned, not laid out beside the poster, so every card is exactly the same
- * size and the whole row lines up whatever the digit count.
+ * Outlined rank numeral in front of the poster's left edge, standing on the poster's bottom
+ * edge, like the design. The numeral is positioned, not laid out beside the poster, so every
+ * card is the same size and the row lines up whatever the digit count.
  */
 export function Top10Card({ rank, title, onPress }: Top10CardProps) {
-  const wide = rank >= 10;
-  const slot = wide ? 118 : 70;
+  const slot = rank >= 10 ? 118 : 72;
   return (
     <View style={{ width: slot - TUCK + POSTER, paddingLeft: slot - TUCK }}>
-      <Text
-        numberOfLines={1}
-        className="absolute text-white"
-        style={{
-          left: 0,
-          // Bottom of the numeral lines up with the bottom of the poster art (3:2 poster, 2 text rows)
-          top: POSTER * 1.5 - NUMERAL * 0.8,
-          width: slot,
-          fontFamily: 'Geist-ExtraBold',
-          fontSize: NUMERAL,
-          lineHeight: NUMERAL,
-          letterSpacing: wide ? -10 : -6,
-          includeFontPadding: false,
-        }}>
-        {rank}
-      </Text>
       <Poster title={title} width={POSTER} onPress={onPress} />
+      <Svg
+        pointerEvents="none"
+        width={slot}
+        height={BASELINE + 8}
+        style={{ position: 'absolute', left: 0, top: POSTER * 1.5 - BASELINE }}>
+        <SvgText
+          x={slot - 3}
+          y={BASELINE}
+          textAnchor="end"
+          fill="none"
+          stroke="rgba(255,255,255,0.7)"
+          strokeWidth={2}
+          fontFamily="Inter24pt-ExtraBold"
+          fontSize={NUMERAL}
+          letterSpacing={rank >= 10 ? -9 : -4}>
+          {String(rank)}
+        </SvgText>
+      </Svg>
     </View>
   );
 }
