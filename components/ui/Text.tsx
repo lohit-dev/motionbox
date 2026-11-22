@@ -7,7 +7,7 @@ interface Props extends TextProps {
 const HAS_WEIGHT = /(^|\s)font-(normal|medium|semibold|bold|extrabold)(\s|$)/;
 
 /**
- * Text in Geist. React Native needs one font file per weight, so the weight classes
+ * Text in Inter. React Native needs one font file per weight, so the weight classes
  * (font-medium, font-semibold, font-bold, font-extrabold) pick a file in tailwind.config.js.
  * Text with no weight class gets Regular. Use this instead of the Text from react-native.
  */

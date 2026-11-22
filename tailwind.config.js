@@ -33,17 +33,17 @@ module.exports = {
       },
     },
   },
-  // React Native needs a font file per weight, so each weight class picks its Geist file
+  // React Native needs a font file per weight, so each weight class picks its Inter file
   // instead of setting fontWeight (which would double up with the file's own weight).
   corePlugins: { fontWeight: false },
   plugins: [
     plugin(({ addUtilities }) => {
       addUtilities({
-        '.font-normal': { fontFamily: 'Geist-Regular' },
-        '.font-medium': { fontFamily: 'Geist-Medium' },
-        '.font-semibold': { fontFamily: 'Geist-SemiBold' },
-        '.font-bold': { fontFamily: 'Geist-Bold' },
-        '.font-extrabold': { fontFamily: 'Geist-ExtraBold' },
+        '.font-normal': { fontFamily: 'Inter24pt-Regular' },
+        '.font-medium': { fontFamily: 'Inter24pt-Medium' },
+        '.font-semibold': { fontFamily: 'Inter24pt-SemiBold' },
+        '.font-bold': { fontFamily: 'Inter24pt-Bold' },
+        '.font-extrabold': { fontFamily: 'Inter24pt-ExtraBold' },
       });
     }),
   ],
