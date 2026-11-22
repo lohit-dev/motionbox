@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -19,6 +20,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useHome } from '@/hooks/useHome';
 import { useTitle, useTitles } from '@/hooks/useTitle';
 import { useUpdates } from '@/hooks/useUpdates';
+import type { FeedKind } from '@/lib/api';
 import { useOpenTitle } from '@/lib/flight';
 import { openTrailer } from '@/lib/trailer';
 import { useApp } from '@/store/store';
@@ -41,6 +43,11 @@ export default function Home() {
   const watching = useApp((s) => s.watching);
   const updatesRead = useApp((s) => s.updatesRead);
   const toggleSave = useApp((s) => s.toggleSave);
+
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
 
   const [reload, setReload] = useState(0);
   const home = useHome(reload);
@@ -80,10 +87,20 @@ export default function Home() {
   const unread = !updatesRead && updates.count > 0;
 
   // "See all" opens the row as a grid. The ids go in the route, the titles are already cached.
-  const seeAll = (title: string, titles: Title[], dates = false) =>
+  // Rows that come from TMDB also carry a `feed`, so the grid can keep loading more pages.
+  const seeAll = (
+    title: string,
+    titles: Title[],
+    opts: { dates?: boolean; feed?: FeedKind } = {}
+  ) =>
     router.push({
       pathname: '/all',
-      params: { title, ids: titles.map((t) => t.id).join(','), ...(dates ? { dates: '1' } : {}) },
+      params: {
+        title,
+        ids: titles.map((t) => t.id).join(','),
+        ...(opts.dates ? { dates: '1' } : {}),
+        ...(opts.feed ? { feed: opts.feed } : {}),
+      },
     });
 
   return (
@@ -91,11 +108,12 @@ export default function Home() {
       {!home.configured ? (
         <NeedsKey />
       ) : (
-        // No rubber band at the top: pulling down would only open a black gap above the hero
-        <ScrollView
+        // Pulling past the top stretches the hero (see HeroCarousel) instead of opening a gap
+        <Animated.ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           contentInsetAdjustmentBehavior="never"
-          bounces={false}
           overScrollMode="never">
           {home.loading ? (
             <View style={{ paddingTop: top + 60 }}>
@@ -114,6 +132,7 @@ export default function Home() {
             <>
               <HeroCarousel
                 slides={slides}
+                scrollY={scrollY}
                 onToggleSave={toggleSave}
                 onOpen={openTitle}
                 onTrailer={playTrailer}
@@ -123,7 +142,7 @@ export default function Home() {
                 <>
                   <SectionHeader
                     title="Fresh trailers"
-                    onAction={() => seeAll('Fresh trailers', home.fresh)}
+                    onAction={() => seeAll('Fresh trailers', home.fresh, { feed: 'fresh' })}
                   />
                   <Rail data={rings} keyExtractor={key} gap={8} renderItem={renderRing} />
                 </>
@@ -143,7 +162,7 @@ export default function Home() {
                 <>
                   <SectionHeader
                     title="Top 10 this week"
-                    onAction={() => seeAll('Top 10 this week', topTen)}
+                    onAction={() => seeAll('Top 10 this week', topTen, { feed: 'trending' })}
                   />
                   <Rail data={topTen} keyExtractor={key} gap={4} renderItem={renderTop} />
                 </>
@@ -163,7 +182,9 @@ export default function Home() {
                 <>
                   <SectionHeader
                     title="Coming soon"
-                    onAction={() => seeAll('Coming soon', home.upcoming, true)}
+                    onAction={() =>
+                      seeAll('Coming soon', home.upcoming, { dates: true, feed: 'upcoming' })
+                    }
                   />
                   <Rail data={home.upcoming} keyExtractor={key} renderItem={renderUpcoming} />
                 </>
@@ -173,7 +194,7 @@ export default function Home() {
                 <>
                   <SectionHeader
                     title="Popular series"
-                    onAction={() => seeAll('Popular series', home.series)}
+                    onAction={() => seeAll('Popular series', home.series, { feed: 'series' })}
                   />
                   <Rail data={home.series} keyExtractor={key} renderItem={renderPoster} />
                 </>
@@ -181,7 +202,7 @@ export default function Home() {
               <View className="h-10" />
             </>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
       )}
 
       {/* Header floats over the hero */}

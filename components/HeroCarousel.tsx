@@ -33,6 +33,8 @@ interface HeroCarouselProps {
   onToggleSave: (id: string) => void;
   onOpen: (title: Title, tag: string) => void;
   onTrailer: (title: Title) => void;
+  /** Vertical scroll offset of the page the carousel sits at the top of. Pulling past the top stretches the hero. */
+  scrollY?: SharedValue<number>;
   /** Milliseconds between automatic slides. 0 turns auto-rotate off. */
   interval?: number;
 }
@@ -50,6 +52,7 @@ export function HeroCarousel({
   onToggleSave,
   onOpen,
   onTrailer,
+  scrollY,
   interval = 6000,
 }: HeroCarouselProps) {
   const { width } = useWindowDimensions();
@@ -59,6 +62,14 @@ export function HeroCarousel({
   const list = useRef<Animated.FlatList<HeroSlide>>(null);
   const touching = useRef(false);
   const scrollX = useSharedValue(n * width);
+  const idle = useSharedValue(0);
+  const pageY = scrollY ?? idle;
+  // Same stretch as the title page: pulling down grows the hero by exactly the pull. Scale about
+  // the centre, then lift by half, so the top follows the finger and the bottom stays put.
+  const stretch = useAnimatedStyle(() => {
+    const pull = Math.max(0, -pageY.value);
+    return { transform: [{ translateY: -pull / 2 }, { scale: 1 + pull / height }] };
+  });
   const onScroll = useAnimatedScrollHandler((e) => {
     scrollX.value = e.contentOffset.x;
   });
@@ -96,38 +107,41 @@ export function HeroCarousel({
         width={width}
         height={height}
         scrollX={scrollX}
+        scrollY={pageY}
         onToggleSave={onToggleSave}
         onOpen={onOpen}
         onTrailer={onTrailer}
       />
     ),
-    [width, height, scrollX, onToggleSave, onOpen, onTrailer]
+    [width, height, scrollX, pageY, onToggleSave, onOpen, onTrailer]
   );
 
   if (!n) return <View style={{ height }} />;
 
   return (
     <View style={{ height }}>
-      <Animated.FlatList
-        ref={list}
-        horizontal
-        pagingEnabled
-        data={looped}
-        keyExtractor={keyOf}
-        initialScrollIndex={n}
-        showsHorizontalScrollIndicator={false}
-        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        initialNumToRender={looped.length}
-        windowSize={looped.length + 1}
-        removeClippedSubviews={false}
-        onScrollBeginDrag={() => {
-          touching.current = true;
-        }}
-        onMomentumScrollEnd={(e) => onEnd(e.nativeEvent.contentOffset.x)}
-        renderItem={renderItem}
-      />
+      <Animated.View style={[{ height }, stretch]}>
+        <Animated.FlatList
+          ref={list}
+          horizontal
+          pagingEnabled
+          data={looped}
+          keyExtractor={keyOf}
+          initialScrollIndex={n}
+          showsHorizontalScrollIndicator={false}
+          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          initialNumToRender={looped.length}
+          windowSize={looped.length + 1}
+          removeClippedSubviews={false}
+          onScrollBeginDrag={() => {
+            touching.current = true;
+          }}
+          onMomentumScrollEnd={(e) => onEnd(e.nativeEvent.contentOffset.x)}
+          renderItem={renderItem}
+        />
+      </Animated.View>
       <View
         pointerEvents="none"
         className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1.5">
@@ -138,6 +152,9 @@ export function HeroCarousel({
     </View>
   );
 }
+
+/** Gap between the bottom of the hero and its text */
+const TEXT_BOTTOM = 34;
 
 const keyOf = (s: HeroSlide, i: number) => `${i}-${s.title.id}`;
 
@@ -171,6 +188,7 @@ interface SlideProps {
   width: number;
   height: number;
   scrollX: SharedValue<number>;
+  scrollY: SharedValue<number>;
   onToggleSave: (id: string) => void;
   onOpen: (title: Title, tag: string) => void;
   onTrailer: (title: Title) => void;
@@ -194,6 +212,7 @@ const Slide = memo(function Slide({
   width,
   height,
   scrollX,
+  scrollY,
   onToggleSave,
   onOpen,
   onTrailer,
@@ -214,6 +233,15 @@ const Slide = memo(function Slide({
       },
     ],
   }));
+  // The stretch scales everything in the hero; the text counter-scales so only the artwork grows
+  const hold = useAnimatedStyle(() => {
+    const pull = Math.max(0, -scrollY.value);
+    const k = 1 + pull / height;
+    return {
+      transformOrigin: 'bottom',
+      transform: [{ translateY: TEXT_BOTTOM * (k - 1) }, { scale: 1 / k }],
+    };
+  });
   const r0 = useRise(scrollX, i, width, 0);
   const r1 = useRise(scrollX, i, width, 1);
   const r2 = useRise(scrollX, i, width, 2);
@@ -241,16 +269,19 @@ const Slide = memo(function Slide({
         </Animated.View>
       </Animated.View>
       <Fade />
-      <View
+      <Animated.View
         pointerEvents="box-none"
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 34,
-          alignItems: 'center',
-          paddingHorizontal: 20,
-        }}>
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: TEXT_BOTTOM,
+            alignItems: 'center',
+            paddingHorizontal: 20,
+          },
+          hold,
+        ]}>
         <Animated.Text style={r0} className="text-eyebrow font-semibold uppercase text-t2">
           {item.eyebrow}
         </Animated.Text>
@@ -294,7 +325,7 @@ const Slide = memo(function Slide({
             <Icon name="info" size={20} />
           </CircleButton>
         </Animated.View>
-      </View>
+      </Animated.View>
     </View>
   );
 });

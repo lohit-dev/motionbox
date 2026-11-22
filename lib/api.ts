@@ -141,6 +141,33 @@ async function fetchHome() {
   };
 }
 
+/** Home rows that "See all" can keep paging through */
+export type FeedKind = 'trending' | 'upcoming' | 'fresh' | 'series';
+
+/** One page of a Home row, for the endless "See all" grid. Pages are 1-based. */
+export async function loadFeed(kind: FeedKind, page: number) {
+  const today = day();
+  const res =
+    kind === 'trending'
+      ? await tmdb<Page<TmdbResult>>(endpoints.trendingWeek, { page })
+      : kind === 'fresh'
+        ? await tmdb<Page<TmdbResult>>(endpoints.nowPlaying, { page })
+        : kind === 'series'
+          ? await tmdb<Page<TmdbResult>>(endpoints.popularSeries, { page })
+          : await tmdb<Page<TmdbResult>>(endpoints.discoverMovies, {
+              page,
+              sort_by: 'popularity.desc',
+              'primary_release_date.gte': today,
+              with_release_type: '2|3',
+            });
+  const results =
+    kind === 'upcoming' ? res.results.filter((r) => (r.release_date ?? '') >= today) : res.results;
+  return {
+    titles: list(results, kind === 'series' ? 'tv' : 'movie'),
+    hasMore: res.page < Math.min(res.total_pages, 500),
+  };
+}
+
 /** Trending, upcoming and popular series. One shared request, so Home and Search never double up. */
 export function loadHome(force = false) {
   if (force || !home) {
