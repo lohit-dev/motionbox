@@ -38,15 +38,7 @@ export default function Layout() {
             <Stack.Screen name="all" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-            {/* Slides up from the bottom like an iPhone sheet; a close button replaces the back arrow */}
-            <Stack.Screen
-              name="person/[id]"
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-                contentStyle: { backgroundColor: colors.ink },
-              }}
-            />
+            <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen
               name="player/[key]"
               options={{

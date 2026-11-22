@@ -265,13 +265,23 @@ export interface TmdbPerson {
   birthday?: string | null;
   place_of_birth?: string | null;
   known_for_department?: string;
-  combined_credits?: { cast: (TmdbResult & { popularity?: number })[] };
+  combined_credits?: { cast: (TmdbResult & { popularity?: number; character?: string })[] };
 }
 
+const JOBS: Record<string, string> = {
+  Acting: 'Actor',
+  Directing: 'Director',
+  Writing: 'Writer',
+  Production: 'Producer',
+};
+
 export function mapPerson(raw: TmdbPerson): { person: Person; known: Title[] } {
+  const cast = (raw.combined_credits?.cast ?? []).filter(
+    (c) => c.media_type === 'movie' || c.media_type === 'tv'
+  );
   const seen = new Set<string>();
-  const known = (raw.combined_credits?.cast ?? [])
-    .filter((c) => c.poster_path && (c.media_type === 'movie' || c.media_type === 'tv'))
+  const known = cast
+    .filter((c) => c.poster_path)
     .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
     .map((c, i) => mapResult(c, i))
     .filter((t): t is Title => {
@@ -280,18 +290,54 @@ export function mapPerson(raw: TmdbPerson): { person: Person; known: Title[] } {
       return true;
     })
     .slice(0, 24);
-  const born = [formatDate(raw.birthday ?? undefined), raw.place_of_birth]
+
+  // Every credit once, newest first, for the filmography and the numbers above it
+  const listed = new Set<string>();
+  const credits = cast
+    .map((c) => {
+      const date = c.release_date || c.first_air_date;
+      return {
+        id: `${c.media_type}-${c.id}`,
+        year: date ? Number(date.slice(0, 4)) : 0,
+        name: c.title ?? c.name ?? 'Untitled',
+        role: c.character?.trim() || '',
+        score: c.vote_average ?? 0,
+      };
+    })
+    .filter((c) => {
+      if (listed.has(c.id)) return false;
+      listed.add(c.id);
+      return true;
+    })
+    .sort((a, b) => (b.year || 9999) - (a.year || 9999));
+  const years = credits.map((c) => c.year).filter(Boolean);
+  const rated = credits.filter((c) => c.score > 0);
+
+  const city = raw.place_of_birth?.split(',')[0]?.trim();
+  const born = raw.birthday ? raw.birthday.slice(0, 4) : '';
+  const line = [
+    JOBS[raw.known_for_department ?? ''] ?? raw.known_for_department,
+    city,
+    born ? `b. ${born}` : '',
+  ]
     .filter(Boolean)
     .join(' · ');
+
   return {
     person: {
       id: raw.id,
       name: raw.name,
       photoPath: raw.profile_path,
       department: raw.known_for_department ?? '',
-      born,
+      line,
       bio: raw.biography?.trim() ?? '',
       knownFor: known.map((t) => t.id),
+      titleCount: credits.length,
+      avgScore: rated.length
+        ? Math.round((rated.reduce((sum, c) => sum + c.score, 0) / rated.length) * 10) / 10
+        : 0,
+      career: years.length ? Math.max(...years) - Math.min(...years) : 0,
+      credits: credits.map(({ id, year, name, role }) => ({ id, year, name, role })),
     },
     known,
   };

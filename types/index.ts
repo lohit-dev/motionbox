@@ -40,9 +40,25 @@ export interface Person {
   name: string;
   photoPath: string | null;
   department: string;
-  born: string;
+  /** "Actor · London · b. 1984" */
+  line: string;
   bio: string;
   knownFor: TitleId[];
+  /** Number of titles they appear in */
+  titleCount: number;
+  /** Average TMDB score across their rated titles, 0 when none is rated */
+  avgScore: number;
+  /** Years between their first and latest credit */
+  career: number;
+  /** Newest first */
+  credits: Credit[];
+}
+
+export interface Credit {
+  id: TitleId;
+  year: number;
+  name: string;
+  role: string;
 }
 
 export interface Clip {

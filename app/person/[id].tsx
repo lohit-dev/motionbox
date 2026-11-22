@@ -1,9 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { Platform, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '@/components/ui/Text';
 import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { Poster } from '@/components/Poster';
@@ -12,8 +11,22 @@ import { Reveal } from '@/components/Reveal';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton } from '@/components/Skeleton';
 import { CircleButton } from '@/components/ui/CircleButton';
+import { Pill } from '@/components/ui/Pill';
+import { Text } from '@/components/ui/Text';
 import { usePerson } from '@/hooks/usePerson';
 import { useOpenTitle } from '@/lib/flight';
+import type { Person as PersonData } from '@/types';
+
+const BIO_CUT = 150;
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View className="items-center">
+      <Text className="text-[20px] font-extrabold text-white">{value}</Text>
+      <Text className="mt-0.5 text-[12px] text-t3">{label}</Text>
+    </View>
+  );
+}
 
 export default function Person() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,9 +35,9 @@ export default function Person() {
   const { top } = useSafeAreaInsets();
   const { person, known, loading, failed, retry } = usePerson(Number(id));
   const [more, setMore] = useState(false);
+  const [notify, setNotify] = useState(false);
 
-  const bio = person?.bio ?? '';
-  const short = bio.length > 260 ? `${bio.slice(0, Math.max(0, bio.lastIndexOf(' ', 260)))}…` : bio;
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
     <View className="flex-1 bg-ink">
@@ -34,18 +47,16 @@ export default function Person() {
           paddingTop: Platform.OS === 'ios' ? 16 : top + 8,
           paddingBottom: 48,
         }}>
-        <View className="items-end px-gutter">
-          <CircleButton
-            icon="close"
-            label="Close"
-            size={40}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          />
+        <View className="px-gutter pb-4">
+          <CircleButton icon="back" label="Back" size={40} onPress={back} />
         </View>
 
         {loading ? (
-          <View className="items-center px-gutter pt-6">
-            <Skeleton width={128} height={128} radius={64} />
+          <View className="px-gutter pt-2">
+            <View className="flex-row items-center gap-5">
+              <Skeleton width={96} height={96} radius={48} />
+              <Skeleton width={160} height={40} radius={8} />
+            </View>
             <Skeleton width={180} height={26} radius={8} style={{ marginTop: 16 }} />
             <Skeleton width={240} height={14} radius={6} style={{ marginTop: 10 }} />
           </View>
@@ -57,24 +68,32 @@ export default function Person() {
             onAction={retry}
           />
         ) : (
-          <Reveal style={{ alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }}>
-            <Avatar name={person.name} size={128} photoPath={person.photoPath} />
-            <Text className="mt-4 text-center text-[28px] font-extrabold tracking-tighter text-white">
-              {person.name}
-            </Text>
-            {person.department ? (
-              <Text className="mt-1 text-[14px] text-t2">{person.department}</Text>
-            ) : null}
-            {person.born ? (
-              <Text className="mt-1 text-center text-[13px] text-t3">Born {person.born}</Text>
-            ) : null}
-            {bio ? (
+          <Reveal>
+            <Header person={person} />
+            <View className="mt-4 flex-row gap-2.5 px-gutter">
+              <Pill
+                title={notify ? 'Notifying you' : 'Notify me'}
+                icon="bell"
+                compact
+                className="flex-1"
+                onPress={() => setNotify((n) => !n)}
+              />
+              <CircleButton
+                icon="share"
+                label="Share"
+                size={46}
+                onPress={() => Share.share({ message: `${person.name} on Motion Box` })}
+              />
+            </View>
+            {person.bio ? (
               <Text
                 onPress={() => setMore((m) => !m)}
-                className="mt-6 self-stretch text-[15px] leading-6 text-t2">
-                {more ? bio : short}
-                {bio.length > 260 ? (
-                  <Text className="font-bold text-white">{more ? '  Less' : '  More'}</Text>
+                className="mt-[18px] px-gutter text-[14.5px] leading-[22px] text-t2">
+                {more || person.bio.length <= BIO_CUT * 1.4
+                  ? person.bio
+                  : `${person.bio.slice(0, Math.max(0, person.bio.lastIndexOf(' ', BIO_CUT)))}… `}
+                {person.bio.length > BIO_CUT * 1.4 ? (
+                  <Text className="font-bold text-white">{more ? '  Less' : 'More'}</Text>
                 ) : null}
               </Text>
             ) : null}
@@ -82,16 +101,58 @@ export default function Person() {
         )}
 
         {known.length ? (
-          <>
+          <View>
             <SectionHeader title="Known for" />
             <Rail
               data={known}
               keyExtractor={(t) => t.id}
               renderItem={(t) => <Poster title={t} showScore onPress={openTitle} />}
             />
-          </>
+          </View>
+        ) : null}
+
+        {person && person.credits.length ? (
+          <View>
+            <SectionHeader title="Filmography" note={`${person.titleCount} titles`} />
+            <View className="mx-gutter">
+              {person.credits.slice(0, 40).map((c) => (
+                <View
+                  key={c.id}
+                  className="flex-row items-center border-t border-white/10 py-3.5">
+                  <Text className="w-[44px] text-[13px] text-t3">{c.year || '—'}</Text>
+                  <Text numberOfLines={1} className="flex-1 text-[14.5px] font-semibold text-white">
+                    {c.name}
+                  </Text>
+                  <Text numberOfLines={1} className="ml-3 max-w-[40%] text-[13px] text-t3">
+                    {c.role}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
         ) : null}
       </ScrollView>
     </View>
+  );
+}
+
+function Header({ person }: { person: PersonData }) {
+  return (
+    <>
+      <View className="flex-row items-center gap-5 px-gutter pt-1.5">
+        <Avatar name={person.name} size={96} photoPath={person.photoPath} />
+        <View className="flex-1 flex-row justify-around">
+          <Stat value={String(person.titleCount)} label="Titles" />
+          <Stat value={person.avgScore ? person.avgScore.toFixed(1) : '—'} label="Avg score" />
+          <Stat value={person.career ? `${person.career}y` : '—'} label="Career" />
+        </View>
+      </View>
+      <View className="px-gutter pt-3.5">
+        <Text className="text-[24px] font-extrabold tracking-tighter text-white">
+          {person.name}
+        </Text>
+        {person.line ? <Text className="mt-0.5 text-[14px] text-t2">{person.line}</Text> : null}
+      </View>
+    </>
   );
 }

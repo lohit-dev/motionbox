@@ -8,17 +8,19 @@ interface PillProps {
   icon?: IconName;
   /** primary is the single white pill on a screen, ghost is the grey one */
   tone?: 'primary' | 'ghost';
+  /** Shorter pill (46) for rows that sit next to a circle button */
+  compact?: boolean;
   onPress?: () => void;
   className?: string;
 }
 
-export function Pill({ title, icon, tone = 'primary', onPress, className = '' }: PillProps) {
+export function Pill({ title, icon, tone = 'primary', compact, onPress, className = '' }: PillProps) {
   const primary = tone === 'primary';
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      className={`h-14 flex-row items-center justify-center gap-2 rounded-full px-6 ${
+      className={`${compact ? 'h-[46px]' : 'h-14'} flex-row items-center justify-center gap-2 rounded-full px-6 ${
         primary ? 'bg-white' : 'bg-s2'
       } ${className}`}>
       {icon ? <Icon name={icon} size={16} color={primary ? colors.ink : colors.white} /> : null}
