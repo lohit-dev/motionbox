@@ -1,8 +1,10 @@
 import 'react-native-url-polyfill/auto';
 import '../global.css';
 
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -22,6 +24,11 @@ export const unstable_settings = {
 };
 
 export default function Layout() {
+  // The app is portrait; only the player's fullscreen turns it sideways
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.ink }}>
       <KeyboardProvider>

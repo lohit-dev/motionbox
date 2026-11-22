@@ -1,7 +1,9 @@
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, ScrollView, Share, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Image, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Scrubber } from '@/components/Scrubber';
@@ -11,6 +13,7 @@ import { Pill } from '@/components/ui/Pill';
 import { Pressable } from '@/components/ui/Pressable';
 import { Text } from '@/components/ui/Text';
 import { clock, genreLine } from '@/lib/format';
+import { shareTitle } from '@/lib/share';
 import { findByClip } from '@/lib/titles';
 import { useApp, useIsSaved } from '@/store/store';
 import { openOnYouTube } from '@/lib/trailer';
@@ -25,7 +28,7 @@ type State =
 export default function Player() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const router = useRouter();
-  const { top } = useSafeAreaInsets();
+  const { top, left: insetL, right: insetR, bottom: insetB } = useSafeAreaInsets();
   const [state, setState] = useState<State>({ phase: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -70,6 +73,19 @@ export default function Player() {
     return () => sub.remove();
   }, [player]);
 
+  // A failed load is retried quietly twice before the fallback screen is left for the person
+  const [auto, setAuto] = useState(0);
+  useEffect(() => setAuto(0), [key]);
+  useEffect(() => {
+    if (state.phase !== 'failed' || auto >= 2) return;
+    const t = setTimeout(() => {
+      setAuto((n) => n + 1);
+      setState({ phase: 'loading' });
+      setAttempt((n) => n + 1);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [state.phase, auto]);
+
   const close = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace('/');
@@ -84,6 +100,21 @@ export default function Player() {
   const [pos, setPos] = useState({ time: 0, total: 0, loaded: 0 });
   const [controls, setControls] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
+
+  // Fullscreen turns the phone to landscape; leaving (or closing the player) puts it back
+  useEffect(() => {
+    ScreenOrientation.lockAsync(
+      fullScreen
+        ? ScreenOrientation.OrientationLock.LANDSCAPE
+        : ScreenOrientation.OrientationLock.PORTRAIT_UP
+    ).catch(() => {});
+  }, [fullScreen]);
+  useEffect(
+    () => () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    },
+    []
+  );
 
   useEffect(() => {
     if (!fullScreen) return;
@@ -137,6 +168,7 @@ export default function Player() {
 
   return (
     <View className="flex-1 bg-ink">
+      {fullScreen ? <StatusBar hidden /> : null}
       <View
         style={
           fullScreen
@@ -214,8 +246,12 @@ export default function Player() {
           }}>
           <View
             pointerEvents="box-none"
-            className="absolute left-4 right-4 flex-row items-center justify-between"
-            style={{ top: top + 8 }}>
+            className="absolute flex-row items-center justify-between"
+            style={{
+              top: fullScreen ? 12 : top + 8,
+              left: Math.max(16, insetL),
+              right: Math.max(16, insetR),
+            }}>
             <CircleButton
               icon="chevronDown"
               label={fullScreen ? 'Exit fullscreen' : 'Close'}
@@ -244,9 +280,7 @@ export default function Player() {
                 label="Share"
                 size={40}
                 tone="glass"
-                onPress={() =>
-                  Share.share({ message: `${title?.name ?? 'Trailer'} on Motion Box` })
-                }
+                onPress={() => title && shareTitle(title)}
               />
               {ready ? (
                 <CircleButton
@@ -267,8 +301,7 @@ export default function Player() {
             <>
               <View
                 pointerEvents="box-none"
-                className="absolute left-0 right-0 flex-row items-center justify-center gap-10"
-                style={{ top: 150 }}>
+                className="absolute inset-0 flex-row items-center justify-center gap-10">
                 <Pressable accessibilityLabel="Back 10 seconds" onPress={() => seekBy(-10)}>
                   <Icon name="replay10" size={30} />
                 </Pressable>
@@ -288,7 +321,13 @@ export default function Player() {
                 </Pressable>
               </View>
 
-              <View className="absolute bottom-3 left-5 right-5">
+              <View
+                className="absolute"
+                style={{
+                  bottom: fullScreen ? Math.max(12, insetB) : 12,
+                  left: Math.max(20, insetL),
+                  right: Math.max(20, insetR),
+                }}>
                 <Scrubber
                   progress={pos.total ? pos.time / pos.total : 0}
                   buffered={pos.total ? pos.loaded / pos.total : 0}
@@ -370,11 +409,13 @@ export default function Player() {
                           resizeMode="cover"
                         />
                       ) : null}
-                      <View className="absolute bottom-2 right-2 rounded-[7px] bg-black/65 px-[7px] py-[3px]">
-                        <Text className="text-[11px] tabular-nums text-white font-medium">
-                          {c.length}
-                        </Text>
-                      </View>
+                      {/\d:\d\d/.test(c.length) ? (
+                        <View className="absolute bottom-2 right-2 rounded-[7px] bg-black/65 px-[7px] py-[3px]">
+                          <Text className="text-[11px] tabular-nums text-white font-medium">
+                            {c.length}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                     <Text
                       numberOfLines={1}
@@ -382,7 +423,7 @@ export default function Player() {
                       {c.title}
                     </Text>
                     <Text className="mt-[3px] text-[10.5px] uppercase tracking-widest text-t3 font-medium">
-                      {now ? 'Playing' : 'Video'}
+                      {now ? 'Playing' : c.length || 'Video'}
                     </Text>
                   </Pressable>
                 );
