@@ -12,7 +12,7 @@ let lastOpen = 0;
  * hero (Reanimated shared element transition, run natively by the stack). Without a tag the
  * page simply fades in.
  */
-export function openTitle(title: Title, tag?: string) {
+export function openTitle(title: Pick<Title, 'id'>, tag?: string) {
   // A second tap while the first page is still opening would stack two details
   const now = Date.now();
   if (now - lastOpen < 600) return;

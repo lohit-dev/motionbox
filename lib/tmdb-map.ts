@@ -301,7 +301,9 @@ export function mapPerson(raw: TmdbPerson): { person: Person; known: Title[] } {
         year: date ? Number(date.slice(0, 4)) : 0,
         name: c.title ?? c.name ?? 'Untitled',
         role: c.character?.trim() || '',
-        score: c.vote_average ?? 0,
+        kind: c.media_type === 'tv' ? ('series' as const) : ('movie' as const),
+        score: Math.round((c.vote_average ?? 0) * 10) / 10,
+        posterPath: c.poster_path,
       };
     })
     .filter((c) => {
@@ -337,7 +339,7 @@ export function mapPerson(raw: TmdbPerson): { person: Person; known: Title[] } {
         ? Math.round((rated.reduce((sum, c) => sum + c.score, 0) / rated.length) * 10) / 10
         : 0,
       career: years.length ? Math.max(...years) - Math.min(...years) : 0,
-      credits: credits.map(({ id, year, name, role }) => ({ id, year, name, role })),
+      credits,
     },
     known,
   };

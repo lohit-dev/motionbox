@@ -59,6 +59,10 @@ export interface Credit {
   year: number;
   name: string;
   role: string;
+  kind: TitleKind;
+  /** TMDB vote average, 0 when unrated */
+  score: number;
+  posterPath: string | null;
 }
 
 export interface Clip {

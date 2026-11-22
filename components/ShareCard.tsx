@@ -1,5 +1,6 @@
 import { Image, View } from 'react-native';
 
+import { Fade } from '@/components/Fade';
 import { Mark } from '@/components/Mark';
 import { Text } from '@/components/ui/Text';
 import { genreLine, hasScore } from '@/lib/format';
@@ -38,15 +39,12 @@ function Shell({ children, art, onReady }: CardProps & { children: React.ReactNo
         />
       ) : null}
       {/* Darkens the top for the brand row and melts the bottom into the text */}
-      <View
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 120, backgroundColor: 'rgba(0,0,0,0.35)' }}
-      />
-      <View
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 290, backgroundColor: 'rgba(11,11,10,0.62)' }}
-      />
-      <View
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 190, backgroundColor: 'rgba(11,11,10,0.82)' }}
-      />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 120, opacity: 0.5 }}>
+        <Fade from="top" hold={0.1} />
+      </View>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 330 }}>
+        <Fade from="bottom" />
+      </View>
       <View style={{ position: 'absolute', top: 20, left: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Mark size={26} />
         <Text className="text-[17px] font-extrabold tracking-tighter text-white">motion.</Text>

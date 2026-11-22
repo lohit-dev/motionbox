@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Fade } from '@/components/Fade';
 import { PosterArt } from '@/components/PosterArt';
 import { TitleLogo } from '@/components/TitleLogo';
 import { Chip } from '@/components/ui/Chip';
@@ -183,16 +184,14 @@ function Page({ id, height, top, active, progress, onDone }: PageProps) {
       {/* Light at the top for the bar, heavy at the bottom for the words */}
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.2, backgroundColor: 'rgba(0,0,0,0.4)' }}
-      />
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.2, opacity: 0.55 }}>
+        <Fade from="top" hold={0.1} />
+      </View>
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.52, backgroundColor: 'rgba(11,11,10,0.55)' }}
-      />
-      <View
-        pointerEvents="none"
-        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.3, backgroundColor: 'rgba(11,11,10,0.8)' }}
-      />
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.62 }}>
+        <Fade from="bottom" />
+      </View>
 
       <View className="absolute right-4 items-center gap-5" style={{ bottom: 150 }}>
         <Action label="Save">

@@ -1,7 +1,7 @@
 const API = 'https://api.themoviedb.org/3';
 const IMAGES = 'https://image.tmdb.org/t/p';
 
-export type PosterSize = 'w185' | 'w342' | 'w500' | 'w780' | 'w1280' | 'original';
+export type PosterSize = 'w185' | 'w342' | 'w500' | 'w780' | 'w1280' | 'h632' | 'original';
 
 /** Builds a TMDB image url from a poster or backdrop path. Returns null when there is no path. */
 export const imageUrl = (path: string | null | undefined, size: PosterSize = 'w500') =>
