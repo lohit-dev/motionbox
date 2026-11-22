@@ -11,13 +11,13 @@ export function ReviewCard({ review }: { review: Review }) {
       <View className="flex-row items-center gap-3">
         <Avatar name={review.initials} size={36} />
         <View className="flex-1">
-          <Text className="text-[14px] font-semibold text-white">{review.user}</Text>
+          <Text className="text-[14px] text-white font-semibold">{review.user}</Text>
           <Text className="text-[12px] text-t3">{review.when}</Text>
         </View>
         {review.score != null ? (
           <View className="flex-row items-center gap-1">
             <Icon name="star" size={12} />
-            <Text className="text-[13px] font-bold text-white">{review.score}/10</Text>
+            <Text className="text-[13px] text-white font-bold">{review.score}/10</Text>
           </View>
         ) : null}
       </View>

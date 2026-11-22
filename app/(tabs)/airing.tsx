@@ -97,7 +97,7 @@ export default function Airing() {
             )}
             {!loading && !failed && rows.length === 0 ? (
               <View className="mt-16 items-center px-8">
-                <Text className="text-xl font-bold text-white">
+                <Text className="text-xl text-white font-bold">
                   {airingSegment === 'mine' ? 'Nothing from your list' : 'Nothing airing'}
                 </Text>
                 <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
@@ -30,12 +30,6 @@ interface SwipeOptions {
  */
 export function useSwipe(go: (direction: 1 | -1) => void, { next, prev }: SwipeOptions) {
   const { width } = useWindowDimensions();
-  const latest = useRef(go);
-  useEffect(() => {
-    latest.current = go;
-  });
-  const call = (direction: 1 | -1) => latest.current(direction);
-
   const x = useSharedValue(0);
   const hasNext = useSharedValue(next);
   const hasPrev = useSharedValue(prev);
@@ -68,15 +62,14 @@ export function useSwipe(go: (direction: 1 | -1) => void, { next, prev }: SwipeO
               { duration: 150, easing: Easing.in(Easing.quad) },
               (done) => {
                 if (!done) return;
-                runOnJS(call)(direction);
+                runOnJS(go)(direction);
                 x.set(direction * width * 0.45);
                 x.set(withTiming(0, { duration: 260, easing: ease }));
               }
             )
           );
         }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [x, width]
+    [x, width, go, hasNext, hasPrev]
   );
 
   const style = useAnimatedStyle(() => ({

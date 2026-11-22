@@ -36,7 +36,7 @@ export function TitleLogo({ title, maxWidth, maxHeight, fontSize = 40 }: TitleLo
   return (
     <Text
       numberOfLines={2}
-      className="text-center font-extrabold tracking-tighter text-white"
+      className="text-center tracking-tighter text-white font-extrabold"
       style={{ fontSize, lineHeight: fontSize * 1.06, maxWidth }}>
       {title.name}
     </Text>

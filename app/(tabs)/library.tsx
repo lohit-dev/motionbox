@@ -186,7 +186,7 @@ export default function Library() {
               accessibilityRole="button"
               scale={0.94}
               onPress={() => setEditing((e) => !e)}>
-              <Text className="text-[15px] font-semibold text-white">
+              <Text className="text-[15px] text-white font-semibold">
                 {editing ? 'Done' : 'Edit'}
               </Text>
             </Pressable>

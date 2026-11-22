@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -146,12 +146,11 @@ export const useApp = create<AppState>()(
 
 /** True once saved state has been read from disk. */
 export function useHydrated() {
-  const [ready, setReady] = useState(useApp.persist.hasHydrated());
-  useEffect(() => {
-    if (useApp.persist.hasHydrated()) setReady(true);
-    return useApp.persist.onFinishHydration(() => setReady(true));
-  }, []);
-  return ready;
+  return useSyncExternalStore(
+    (onChange) => useApp.persist.onFinishHydration(onChange),
+    () => useApp.persist.hasHydrated(),
+    () => useApp.persist.hasHydrated()
+  );
 }
 
 export const useIsSaved = (id: TitleId) => useApp((s) => s.saved.includes(id));

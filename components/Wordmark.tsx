@@ -5,10 +5,10 @@ import { Text } from '@/components/ui/Text';
 export function Wordmark({ size = 30 }: { size?: number }) {
   return (
     <View className="flex-row items-baseline">
-      <Text className="font-extrabold tracking-tighter text-white" style={{ fontSize: size }}>
+      <Text className="tracking-tighter text-white font-extrabold" style={{ fontSize: size }}>
         motion
       </Text>
-      <Text className="font-extrabold text-white" style={{ fontSize: size }}>
+      <Text className="text-white font-extrabold" style={{ fontSize: size }}>
         .
       </Text>
     </View>

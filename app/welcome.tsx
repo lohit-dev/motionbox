@@ -54,7 +54,7 @@ export default function Welcome() {
         className="absolute left-gutter right-gutter"
         style={{ bottom: bottom + 28 }}>
         <Wordmark size={34} />
-        <Text className="mt-3 text-[28px] font-extrabold leading-[30px] tracking-tighter text-white">
+        <Text className="mt-3 text-[28px] leading-[30px] tracking-tighter text-white font-extrabold">
           Everything you watch, in one place.
         </Text>
         <Text className="mt-3 text-[15px] leading-[22px] text-t2">

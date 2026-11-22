@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Share, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, BackHandler, Image, ScrollView, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Scrubber } from '@/components/Scrubber';
@@ -53,7 +53,10 @@ export default function Player() {
     state.phase === 'ready'
       ? { uri: state.uri, contentType: state.hls ? 'hls' : 'progressive' }
       : null,
-    (p) => p.play()
+    (p) => {
+      p.timeUpdateEventInterval = 0.25;
+      p.play();
+    }
   );
 
   // A stream that resolves but won't decode still ends up on the fallback screen
@@ -77,13 +80,22 @@ export default function Player() {
   const clip = title?.clips?.find((c) => c.key === key);
   const saved = useIsSaved(title?.id ?? '');
   const toggleSave = useApp((s) => s.toggleSave);
-  const view = useRef<VideoView>(null);
   const [playing, setPlaying] = useState(true);
   const [pos, setPos] = useState({ time: 0, total: 0, loaded: 0 });
   const [controls, setControls] = useState(true);
+  const [fullScreen, setFullScreen] = useState(false);
 
   useEffect(() => {
-    player.timeUpdateEventInterval = 0.25;
+    if (!fullScreen) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setFullScreen(false);
+      setControls(true);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [fullScreen]);
+
+  useEffect(() => {
     const time = player.addListener('timeUpdate', (e) =>
       setPos({ time: e.currentTime, total: player.duration, loaded: e.bufferedPosition })
     );
@@ -111,7 +123,11 @@ export default function Player() {
   const left = Math.max(0, pos.total - pos.time);
 
   const goToDetails = () => {
-    if (title) router.replace({ pathname: '/title/[id]', params: { id: title.id } });
+    if (!title) return;
+    // The player is pushed from the title screen. Pop it so details appears immediately
+    // and preserves the title screen's navigation state.
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/title/[id]', params: { id: title.id } });
   };
   const playClip = (k?: string) => {
     if (!k || k === key) return;
@@ -121,11 +137,25 @@ export default function Player() {
 
   return (
     <View className="flex-1 bg-ink">
-      <View style={{ height: 360, backgroundColor: '#000', overflow: 'hidden' }}>
+      <View
+        style={
+          fullScreen
+            ? {
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                zIndex: 10,
+                elevation: 10,
+                backgroundColor: '#000',
+                overflow: 'hidden',
+              }
+            : { height: 360, backgroundColor: '#000', overflow: 'hidden' }
+        }>
         {ready ? (
           <>
             <VideoView
-              ref={view}
               player={player}
               style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
               contentFit="contain"
@@ -145,28 +175,30 @@ export default function Player() {
           </View>
         ) : (
           <View className="flex-1 items-center justify-center">
-        <View className="items-center px-10">
-          <Text className="text-center text-xl font-bold text-white">
-            Can&apos;t play this here
-          </Text>
-          <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
-            The trailer didn&apos;t load in the app. You can try again or watch it on YouTube.
-          </Text>
-          {__DEV__ && state.reason ? (
-            <Text className="mt-3 text-center text-[11px] leading-4 text-t3">{state.reason}</Text>
-          ) : null}
-          <View className="mt-6 flex-row gap-3">
-            <Pill
-              title="Try again"
-              tone="ghost"
-              onPress={() => {
-                setState({ phase: 'loading' });
-                setAttempt((n) => n + 1);
-              }}
-            />
-            <Pill title="Open YouTube" icon="play" onPress={() => openOnYouTube(key)} />
-          </View>
-        </View>
+            <View className="items-center px-10">
+              <Text className="text-center text-xl text-white font-bold">
+                Can&apos;t play this here
+              </Text>
+              <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
+                The trailer didn&apos;t load in the app. You can try again or watch it on YouTube.
+              </Text>
+              {__DEV__ && state.reason ? (
+                <Text className="mt-3 text-center text-[11px] leading-4 text-t3">
+                  {state.reason}
+                </Text>
+              ) : null}
+              <View className="mt-6 flex-row gap-3">
+                <Pill
+                  title="Try again"
+                  tone="ghost"
+                  onPress={() => {
+                    setState({ phase: 'loading' });
+                    setAttempt((n) => n + 1);
+                  }}
+                />
+                <Pill title="Open YouTube" icon="play" onPress={() => openOnYouTube(key)} />
+              </View>
+            </View>
           </View>
         )}
 
@@ -184,7 +216,18 @@ export default function Player() {
             pointerEvents="box-none"
             className="absolute left-4 right-4 flex-row items-center justify-between"
             style={{ top: top + 8 }}>
-            <CircleButton icon="chevronDown" label="Close" size={40} tone="glass" onPress={close} />
+            <CircleButton
+              icon="chevronDown"
+              label={fullScreen ? 'Exit fullscreen' : 'Close'}
+              size={40}
+              tone="glass"
+              onPress={() => {
+                if (fullScreen) {
+                  setFullScreen(false);
+                  setControls(true);
+                } else close();
+              }}
+            />
             <View className="flex-row gap-2">
               {title ? (
                 <CircleButton
@@ -201,7 +244,9 @@ export default function Player() {
                 label="Share"
                 size={40}
                 tone="glass"
-                onPress={() => Share.share({ message: `${title?.name ?? 'Trailer'} on Motion Box` })}
+                onPress={() =>
+                  Share.share({ message: `${title?.name ?? 'Trailer'} on Motion Box` })
+                }
               />
               {ready ? (
                 <CircleButton
@@ -209,7 +254,10 @@ export default function Player() {
                   label="Fullscreen"
                   size={40}
                   tone="glass"
-                  onPress={() => view.current?.enterFullscreen()}
+                  onPress={() => {
+                    setFullScreen(true);
+                    setControls(true);
+                  }}
                 />
               ) : null}
             </View>
@@ -245,15 +293,15 @@ export default function Player() {
                   progress={pos.total ? pos.time / pos.total : 0}
                   buffered={pos.total ? pos.loaded / pos.total : 0}
                   onSeek={(f) => {
-                    player.currentTime = f * pos.total;
+                    player.seekBy(f * pos.total - pos.time);
                     setControls(true);
                   }}
                 />
                 <View className="mt-0.5 flex-row justify-between">
-                  <Text className="text-[12px] font-medium text-white tabular-nums">
+                  <Text className="text-[12px] tabular-nums text-white font-medium">
                     {clock(pos.time)}
                   </Text>
-                  <Text className="text-[12px] font-medium text-t2 tabular-nums">
+                  <Text className="text-[12px] tabular-nums text-t2 font-medium">
                     −{clock(left)}
                   </Text>
                 </View>
@@ -263,16 +311,18 @@ export default function Player() {
         </View>
       </View>
 
-      {title ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      {!fullScreen && title ? (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}>
           <View className="px-gutter pt-5">
             <View className="flex-row items-center gap-2">
               <View className="h-1.5 w-1.5 rounded-full bg-white" />
-              <Text className="text-[11px] font-medium uppercase tracking-widest text-t2">
+              <Text className="text-[11px] uppercase tracking-widest text-t2 font-medium">
                 Now playing · {clip?.title ?? 'Trailer'}
               </Text>
             </View>
-            <Text className="mt-2.5 text-[30px] font-bold tracking-tighter text-white">
+            <Text className="mt-2.5 text-[30px] tracking-tighter text-white font-bold">
               {title.name}
             </Text>
             <Text className="mt-1.5 text-[12.5px] text-t3">
@@ -283,7 +333,7 @@ export default function Player() {
             {title.clips && title.clips.length > 1 ? (
               <>
                 <View className="mt-[26px] flex-row items-end justify-between pb-3">
-                  <Text className="text-section font-extrabold text-white">More videos</Text>
+                  <Text className="text-section text-white font-extrabold">More videos</Text>
                   <Text className="text-[12px] text-t3">{title.clips.length}</Text>
                 </View>
               </>
@@ -321,15 +371,17 @@ export default function Player() {
                         />
                       ) : null}
                       <View className="absolute bottom-2 right-2 rounded-[7px] bg-black/65 px-[7px] py-[3px]">
-                        <Text className="text-[11px] font-medium text-white tabular-nums">
+                        <Text className="text-[11px] tabular-nums text-white font-medium">
                           {c.length}
                         </Text>
                       </View>
                     </View>
-                    <Text numberOfLines={1} className="mt-[9px] text-[14.5px] font-semibold text-white">
+                    <Text
+                      numberOfLines={1}
+                      className="mt-[9px] text-[14.5px] text-white font-semibold">
                       {c.title}
                     </Text>
-                    <Text className="mt-[3px] text-[10.5px] font-medium uppercase tracking-widest text-t3">
+                    <Text className="mt-[3px] text-[10.5px] uppercase tracking-widest text-t3 font-medium">
                       {now ? 'Playing' : 'Video'}
                     </Text>
                   </Pressable>

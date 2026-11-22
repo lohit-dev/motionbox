@@ -153,7 +153,7 @@ export default function TitleDetail() {
   if (!title) {
     return (
       <View className="flex-1 items-center justify-center bg-ink px-8">
-        <Text className="text-center text-xl font-bold text-white">
+        <Text className="text-center text-xl text-white font-bold">
           {loading ? 'Loading…' : failed ? 'Could not load this title' : 'Title not found'}
         </Text>
         <View className="mt-6">
@@ -262,7 +262,7 @@ export default function TitleDetail() {
               <Animated.View
                 pointerEvents="box-none"
                 style={[{ alignItems: 'center', paddingHorizontal: 20 }, heroText]}>
-                <Text className="text-eyebrow font-semibold uppercase text-t2">
+                <Text className="text-eyebrow uppercase text-t2 font-semibold">
                   {kindLine(title)}
                 </Text>
                 <View className="mt-2 items-center">
@@ -277,7 +277,7 @@ export default function TitleDetail() {
                   {hasScore(title) ? (
                     <View className="flex-row items-center gap-1">
                       <Icon name="star" size={13} />
-                      <Text className="text-[13px] font-semibold text-white">
+                      <Text className="text-[13px] text-white font-semibold">
                         {title.score.toFixed(1)}
                       </Text>
                     </View>
@@ -287,7 +287,7 @@ export default function TitleDetail() {
                   ) : null}
                   {title.rating ? (
                     <View className="rounded border border-white/30 px-1.5 py-0.5">
-                      <Text className="text-[11px] font-semibold text-t2">{title.rating}</Text>
+                      <Text className="text-[11px] text-t2 font-semibold">{title.rating}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -303,7 +303,7 @@ export default function TitleDetail() {
               className="px-gutter pt-2 text-[15px] leading-6 text-t2">
               {expanded ? story : short}
               {story.length > 118 ? (
-                <Text className="font-bold text-white">{expanded ? '  Less' : '  More'}</Text>
+                <Text className="text-white font-bold">{expanded ? '  Less' : '  More'}</Text>
               ) : null}
             </Text>
 
@@ -313,7 +313,7 @@ export default function TitleDetail() {
                 scale={0.98}
                 onPress={() => setEpisodesOpen(true)}
                 className="mx-gutter mt-6 h-14 flex-row items-center justify-between rounded-card bg-s1 px-4">
-                <Text className="text-base font-semibold text-white">
+                <Text className="text-base text-white font-semibold">
                   Episodes
                   {title.seasons
                     ? ` · ${title.seasons} ${title.seasons === 1 ? 'season' : 'seasons'}`
@@ -368,7 +368,7 @@ export default function TitleDetail() {
                           <Avatar name={c.name} size={72} photoPath={c.photoPath} />
                           <Text
                             numberOfLines={1}
-                            className="mt-2 text-[12.5px] font-semibold text-white">
+                            className="mt-2 text-[12.5px] text-white font-semibold">
                             {c.name}
                           </Text>
                           <Text numberOfLines={1} className="text-[11.5px] text-t3">
@@ -415,7 +415,7 @@ export default function TitleDetail() {
                         i ? 'border-t border-white/5' : ''
                       }`}>
                       <Text className="text-[14px] text-t3">{k}</Text>
-                      <Text className="flex-1 text-right text-[14px] font-semibold text-white">
+                      <Text className="flex-1 text-right text-[14px] text-white font-semibold">
                         {v}
                       </Text>
                     </View>

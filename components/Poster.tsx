@@ -47,24 +47,24 @@ function PosterBase({
         {showScore && hasScore(title) ? (
           <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-full bg-black/65 px-2 py-1">
             <Icon name="star" size={10} />
-            <Text className="text-[11px] font-semibold text-white">{title.score.toFixed(1)}</Text>
+            <Text className="text-[11px] text-white font-semibold">{title.score.toFixed(1)}</Text>
           </View>
         ) : null}
         {tag ? (
           <View className="absolute left-1.5 top-1.5 rounded-full bg-white px-2 py-1">
-            <Text className="text-[10.5px] font-extrabold tracking-wide text-ink">{tag}</Text>
+            <Text className="text-[10.5px] tracking-wide text-ink font-extrabold">{tag}</Text>
           </View>
         ) : null}
         {date ? (
           <View className="absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2.5 py-1">
-            <Text className="text-[11px] font-bold text-white">{date}</Text>
+            <Text className="text-[11px] text-white font-bold">{date}</Text>
           </View>
         ) : null}
       </View>
       <Text
         numberOfLines={1}
         style={{ width }}
-        className="mt-2 text-[13px] font-semibold text-white">
+        className="mt-2 text-[13px] text-white font-semibold">
         {title.name}
       </Text>
       <Text numberOfLines={1} style={{ width }} className="mt-0.5 text-xs text-t3">

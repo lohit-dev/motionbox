@@ -22,7 +22,7 @@ const BIO_CUT = 150;
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <View className="items-center">
-      <Text className="text-[20px] font-extrabold text-white">{value}</Text>
+      <Text className="text-[20px] text-white font-extrabold">{value}</Text>
       <Text className="mt-0.5 text-[12px] text-t3">{label}</Text>
     </View>
   );
@@ -93,7 +93,7 @@ export default function Person() {
                   ? person.bio
                   : `${person.bio.slice(0, Math.max(0, person.bio.lastIndexOf(' ', BIO_CUT)))}… `}
                 {person.bio.length > BIO_CUT * 1.4 ? (
-                  <Text className="font-bold text-white">{more ? '  Less' : 'More'}</Text>
+                  <Text className="text-white font-bold">{more ? '  Less' : 'More'}</Text>
                 ) : null}
               </Text>
             ) : null}
@@ -116,11 +116,9 @@ export default function Person() {
             <SectionHeader title="Filmography" note={`${person.titleCount} titles`} />
             <View className="mx-gutter">
               {person.credits.slice(0, 40).map((c) => (
-                <View
-                  key={c.id}
-                  className="flex-row items-center border-t border-white/10 py-3.5">
+                <View key={c.id} className="flex-row items-center border-t border-white/10 py-3.5">
                   <Text className="w-[44px] text-[13px] text-t3">{c.year || '—'}</Text>
-                  <Text numberOfLines={1} className="flex-1 text-[14.5px] font-semibold text-white">
+                  <Text numberOfLines={1} className="flex-1 text-[14.5px] text-white font-semibold">
                     {c.name}
                   </Text>
                   <Text numberOfLines={1} className="ml-3 max-w-[40%] text-[13px] text-t3">
@@ -148,7 +146,7 @@ function Header({ person }: { person: PersonData }) {
         </View>
       </View>
       <View className="px-gutter pt-3.5">
-        <Text className="text-[24px] font-extrabold tracking-tighter text-white">
+        <Text className="text-[24px] tracking-tighter text-white font-extrabold">
           {person.name}
         </Text>
         {person.line ? <Text className="mt-0.5 text-[14px] text-t2">{person.line}</Text> : null}

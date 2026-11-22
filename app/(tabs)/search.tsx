@@ -174,9 +174,9 @@ export default function Search() {
             {recents.length ? (
               <View className="px-gutter pt-6">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-eyebrow font-semibold uppercase text-t3">Recent</Text>
+                  <Text className="text-eyebrow uppercase text-t3 font-semibold">Recent</Text>
                   <Pressable accessibilityRole="button" scale={0.94} onPress={clearRecents}>
-                    <Text className="text-[13px] font-medium text-t3">Clear</Text>
+                    <Text className="text-[13px] text-t3 font-medium">Clear</Text>
                   </Pressable>
                 </View>
                 {recents.map((r) => (
@@ -196,7 +196,7 @@ export default function Search() {
 
             {home.trending.length ? (
               <View className="px-gutter pt-7">
-                <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">
+                <Text className="mb-3 text-eyebrow uppercase text-t3 font-semibold">
                   Trending searches
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
@@ -208,7 +208,7 @@ export default function Search() {
             ) : null}
 
             <View className="px-gutter pt-7">
-              <Text className="mb-3 text-eyebrow font-semibold uppercase text-t3">Browse</Text>
+              <Text className="mb-3 text-eyebrow uppercase text-t3 font-semibold">Browse</Text>
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {GENRES.map((genre, i) => {
                   const uri = imageUrl(covers[genre], 'w780');
@@ -246,7 +246,7 @@ export default function Search() {
                             padding: 12,
                             backgroundColor: 'rgba(0,0,0,0.45)',
                           }}>
-                          <Text className="text-base font-bold text-white">{genre}</Text>
+                          <Text className="text-base text-white font-bold">{genre}</Text>
                         </View>
                       </Pressable>
                     </Reveal>
@@ -319,7 +319,7 @@ export default function Search() {
                   className="flex-row items-center gap-3 px-gutter py-2.5">
                   <Avatar name={item.name} size={52} photoPath={item.photoPath} />
                   <View className="flex-1">
-                    <Text className="text-[16px] font-semibold text-white">{item.name}</Text>
+                    <Text className="text-[16px] text-white font-semibold">{item.name}</Text>
                     {item.department ? (
                       <Text className="text-[13px] text-t3">{item.department}</Text>
                     ) : null}
@@ -343,7 +343,7 @@ export default function Search() {
                 onEndReachedThreshold={0.6}
                 ListHeaderComponent={
                   search.total && !search.loading ? (
-                    <Text className="pb-3 text-eyebrow font-semibold uppercase text-t3">
+                    <Text className="pb-3 text-eyebrow uppercase text-t3 font-semibold">
                       {search.total.toLocaleString()} {search.total === 1 ? 'result' : 'results'}
                     </Text>
                   ) : undefined

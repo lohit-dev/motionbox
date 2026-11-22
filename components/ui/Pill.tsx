@@ -14,7 +14,14 @@ interface PillProps {
   className?: string;
 }
 
-export function Pill({ title, icon, tone = 'primary', compact, onPress, className = '' }: PillProps) {
+export function Pill({
+  title,
+  icon,
+  tone = 'primary',
+  compact,
+  onPress,
+  className = '',
+}: PillProps) {
   const primary = tone === 'primary';
   return (
     <Pressable

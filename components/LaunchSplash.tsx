@@ -40,10 +40,10 @@ export function LaunchSplash() {
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.layer, layerStyle]}>
       <Animated.View style={markStyle}>
         <View className="flex-row items-baseline">
-          <Text className="font-extrabold tracking-tighter text-white" style={styles.m}>
+          <Text className="tracking-tighter text-white font-extrabold" style={styles.m}>
             m
           </Text>
-          <Text className="font-extrabold text-white" style={styles.m}>
+          <Text className="text-white font-extrabold" style={styles.m}>
             .
           </Text>
         </View>

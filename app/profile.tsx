@@ -30,7 +30,7 @@ function TasteBar({ label, percent, index }: { label: string; percent: number; i
   const fill = useAnimatedStyle(() => ({ width: `${w.value}%` }));
   return (
     <View className="mt-3 flex-row items-center gap-3">
-      <Text className="w-[74px] text-[13.5px] font-semibold text-white">{label}</Text>
+      <Text className="w-[74px] text-[13.5px] text-white font-semibold">{label}</Text>
       <View className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
         <Animated.View
           style={[{ height: 6, borderRadius: 3, backgroundColor: colors.white }, fill]}
@@ -61,7 +61,7 @@ function Row({
       <View className="h-9 w-9 items-center justify-center rounded-full bg-s2">
         <Icon name={icon} size={17} />
       </View>
-      <Text className="flex-1 text-[15.5px] font-semibold text-white">{label}</Text>
+      <Text className="flex-1 text-[15.5px] text-white font-semibold">{label}</Text>
       {right}
     </Pressable>
   );
@@ -122,7 +122,7 @@ export default function Profile() {
               [watched.length, 'Watched'],
             ].map(([n, l]) => (
               <View key={l} className="items-center">
-                <Text className="text-[20px] font-extrabold text-white">{n}</Text>
+                <Text className="text-[20px] text-white font-extrabold">{n}</Text>
                 <Text className="mt-0.5 text-[12px] text-t3">{l}</Text>
               </View>
             ))}
@@ -130,7 +130,7 @@ export default function Profile() {
         </Reveal>
 
         <View className="px-gutter pt-4">
-          <Text className="text-[18px] font-bold tracking-tight text-white">Your library</Text>
+          <Text className="text-[18px] tracking-tight text-white font-bold">Your library</Text>
           <Text className="mt-0.5 text-[14px] text-t3">
             {tracked.length
               ? `${tracked.length} ${tracked.length === 1 ? 'title' : 'titles'} tracked`
@@ -153,7 +153,7 @@ export default function Profile() {
 
         {taste.length ? (
           <View className="mx-gutter mt-6 rounded-card bg-s1 p-4 pb-4">
-            <Text className="text-eyebrow font-semibold uppercase text-t3">Your taste</Text>
+            <Text className="text-eyebrow uppercase text-t3 font-semibold">Your taste</Text>
             {taste.map(([n, p], i) => (
               <TasteBar key={n} label={n} percent={p} index={i} />
             ))}

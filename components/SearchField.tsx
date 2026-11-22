@@ -36,7 +36,7 @@ export function SearchField({
           onSubmitEditing={onSubmit}
           autoCorrect={false}
           selectionColor={colors.white}
-          className="flex-1 font-normal text-base text-white"
+          className="flex-1 text-base text-white font-normal"
         />
         {value ? (
           <Pressable
@@ -57,7 +57,7 @@ export function SearchField({
           <Icon name="filter" size={20} />
           {badge ? (
             <View className="absolute -right-0.5 -top-0.5 h-5 w-5 items-center justify-center rounded-full bg-white">
-              <Text className="text-[11px] font-bold text-ink">{badge}</Text>
+              <Text className="text-[11px] text-ink font-bold">{badge}</Text>
             </View>
           ) : null}
         </Pressable>

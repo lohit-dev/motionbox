@@ -9,36 +9,34 @@ import type { Title } from '@/types';
  * with the full TMDB detail once that arrives.
  */
 export function useTitle(id: string) {
-  const [title, setTitle] = useState<Title | undefined>(() => getTitle(id));
-  const [loading, setLoading] = useState(() => !getTitle(id) && hasTmdb() && !!parseId(id));
-  const [failed, setFailed] = useState(false);
+  const [result, setResult] = useState<{ key: string; failed: boolean } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const key = `${id}:${attempt}`;
+  const title = getTitle(id);
+  const shouldLoad = hasTmdb() && !!parseId(id) && !title?.detailed;
 
   useEffect(() => {
-    const known = getTitle(id);
-    setTitle(known);
-    setFailed(false);
-    if (!hasTmdb() || !parseId(id) || known?.detailed) return;
+    if (!shouldLoad) return;
 
     let live = true;
-    setLoading(true);
     loadDetail(id)
-      .then((full) => {
-        if (!live) return;
-        setTitle(full);
-        setLoading(false);
-      })
+      .then(() => live && setResult({ key, failed: false }))
       .catch(() => {
         if (!live) return;
-        setLoading(false);
-        setFailed(true);
+        setResult({ key, failed: true });
       });
     return () => {
       live = false;
     };
-  }, [id, attempt]);
+  }, [id, key, shouldLoad]);
 
-  return { title, loading, failed, retry: () => setAttempt((n) => n + 1) };
+  const current = result?.key === key ? result : null;
+  return {
+    title,
+    loading: shouldLoad && !current,
+    failed: shouldLoad && (current?.failed ?? false),
+    retry: () => setAttempt((n) => n + 1),
+  };
 }
 
 /**
@@ -48,25 +46,29 @@ export function useTitle(id: string) {
 export function useTitles(ids: string[]) {
   const key = ids.join(',');
   const [, setTick] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [completedKey, setCompletedKey] = useState<string | null>(null);
+  const requestIds = key ? key.split(',') : [];
+  const missing = requestIds.filter(
+    (id) => parseId(id) && !getTitle(id)?.detailed && !getTitle(id)
+  );
 
   useEffect(() => {
     if (!hasTmdb()) return;
-    const missing = ids.filter((id) => parseId(id) && !getTitle(id)?.detailed && !getTitle(id));
-    if (!missing.length) return;
+    const missingIds = (key ? key.split(',') : []).filter(
+      (id) => parseId(id) && !getTitle(id)?.detailed && !getTitle(id)
+    );
+    if (!missingIds.length) return;
     let live = true;
-    setLoading(true);
-    Promise.all(missing.map((id) => loadDetail(id).catch(() => null))).then(() => {
+    Promise.all(missingIds.map((id) => loadDetail(id).catch(() => null))).then(() => {
       if (!live) return;
-      setLoading(false);
+      setCompletedKey(key);
       setTick((n) => n + 1);
     });
     return () => {
       live = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  const titles = ids.map((id) => getTitle(id)).filter((t): t is Title => !!t);
-  return { titles, loading };
+  const titles = requestIds.map((id) => getTitle(id)).filter((t): t is Title => !!t);
+  return { titles, loading: hasTmdb() && missing.length > 0 && completedKey !== key };
 }

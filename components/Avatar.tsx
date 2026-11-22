@@ -21,7 +21,7 @@ export function Avatar({ name, size = 80, photoPath }: AvatarProps) {
       {uri ? (
         <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="cover" />
       ) : (
-        <Text className="font-bold text-white" style={{ fontSize: size * 0.32 }}>
+        <Text className="text-white font-bold" style={{ fontSize: size * 0.32 }}>
           {initials(name)}
         </Text>
       )}

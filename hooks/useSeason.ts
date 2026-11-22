@@ -4,24 +4,30 @@ import { loadSeason } from '@/lib/api';
 import type { Episode } from '@/types';
 
 export function useSeason(id: string, season: number, enabled = true) {
-  const [state, setState] = useState<{ episodes: Episode[]; loading: boolean; failed: boolean }>({
-    episodes: [],
-    loading: enabled,
-    failed: false,
-  });
+  const [state, setState] = useState<{
+    key: string;
+    episodes: Episode[];
+    failed: boolean;
+  } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const key = `${id}:${season}:${attempt}`;
 
   useEffect(() => {
     if (!enabled) return;
     let live = true;
-    setState({ episodes: [], loading: true, failed: false });
     loadSeason(id, season)
-      .then((episodes) => live && setState({ episodes, loading: false, failed: false }))
-      .catch(() => live && setState({ episodes: [], loading: false, failed: true }));
+      .then((episodes) => live && setState({ key, episodes, failed: false }))
+      .catch(() => live && setState({ key, episodes: [], failed: true }));
     return () => {
       live = false;
     };
-  }, [id, season, enabled, attempt]);
+  }, [id, season, enabled, key]);
 
-  return { ...state, retry: () => setAttempt((n) => n + 1) };
+  const current = state?.key === key ? state : null;
+  return {
+    episodes: current?.episodes ?? [],
+    loading: enabled && !current,
+    failed: current?.failed ?? false,
+    retry: () => setAttempt((n) => n + 1),
+  };
 }

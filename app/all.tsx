@@ -79,12 +79,12 @@ export default function SeeAll() {
             <View className="items-center py-6">
               <ActivityIndicator color="#fff" />
             </View>
-          ) : null
+          ) : undefined
         }
         ListHeaderComponent={
           <View className="mb-1 px-gutter">
             <CircleButton icon="back" label="Back" size={44} onPress={() => router.back()} />
-            <Text className="mt-4 text-[32px] font-extrabold tracking-tighter text-white">
+            <Text className="mt-4 text-[32px] tracking-tighter text-white font-extrabold">
               {title}
             </Text>
           </View>

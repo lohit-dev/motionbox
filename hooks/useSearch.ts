@@ -28,60 +28,78 @@ const IDLE: State = {
  * Call loadMore() from the list's onEndReached for infinite scrolling.
  */
 export function useSearch(query: string, filters: Filters, enabled: boolean) {
-  const [state, setState] = useState<State>(IDLE);
+  const [result, setResult] = useState<{ key: string; state: State } | null>(null);
   const page = useRef(1);
   const busy = useRef(false);
   const [attempt, setAttempt] = useState(0);
   const key = JSON.stringify([query.trim(), filters, attempt]);
+  const active = hasTmdb() && enabled;
 
   useEffect(() => {
-    if (!hasTmdb() || !enabled) {
-      setState(IDLE);
-      return;
-    }
+    if (!active) return;
     const controller = new AbortController();
     page.current = 1;
     busy.current = false;
-    setState({ ...IDLE, loading: true });
     const timer = setTimeout(() => {
       searchPage(query, filters, 1, controller.signal)
-        .then((res) => setState({ ...IDLE, ...res, loading: false }))
+        .then((res) => setResult({ key, state: { ...IDLE, ...res, loading: false } }))
         .catch((error: unknown) => {
-          if ((error as Error).name === 'AbortError') return;
-          setState({ ...IDLE, failed: true });
+          if (error instanceof Error && error.name === 'AbortError') return;
+          setResult({ key, state: { ...IDLE, failed: true } });
         });
     }, 320);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled]);
+  }, [active, filters, key, query]);
 
   const loadMore = useCallback(() => {
-    if (busy.current || !state.hasMore || state.loading) return;
+    const current = result?.key === key ? result.state : IDLE;
+    if (busy.current || !active || result?.key !== key || !current.hasMore || current.loading)
+      return;
     busy.current = true;
     page.current += 1;
-    setState((s) => ({ ...s, loadingMore: true }));
+    setResult((previous) =>
+      previous?.key === key ? { key, state: { ...previous.state, loadingMore: true } } : previous
+    );
     searchPage(query, filters, page.current)
       .then((res) =>
-        setState((s) => {
-          const seen = new Set(s.titles.map((t) => t.id));
+        setResult((previous) => {
+          if (previous?.key !== key) return previous;
+          const seen = new Set(previous.state.titles.map((t) => t.id));
           return {
-            ...s,
-            titles: s.titles.concat(res.titles.filter((t) => !seen.has(t.id))),
-            people: s.people.concat(res.people),
-            hasMore: res.hasMore,
-            loadingMore: false,
+            key,
+            state: {
+              ...previous.state,
+              titles: previous.state.titles.concat(res.titles.filter((t) => !seen.has(t.id))),
+              people: previous.state.people.concat(res.people),
+              hasMore: res.hasMore,
+              loadingMore: false,
+            },
           };
         })
       )
-      .catch(() => setState((s) => ({ ...s, loadingMore: false, hasMore: false })))
+      .catch(() =>
+        setResult((previous) =>
+          previous?.key === key
+            ? {
+                key,
+                state: { ...previous.state, loadingMore: false, hasMore: false },
+              }
+            : previous
+        )
+      )
       .finally(() => {
         busy.current = false;
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.hasMore, state.loading, key]);
+  }, [active, filters, key, query, result]);
 
-  return { ...state, loadMore, retry: () => setAttempt((n) => n + 1) };
+  const state = active && result?.key === key ? result.state : IDLE;
+  return {
+    ...state,
+    loading: active && (result?.key !== key || state.loading),
+    loadMore,
+    retry: () => setAttempt((n) => n + 1),
+  };
 }

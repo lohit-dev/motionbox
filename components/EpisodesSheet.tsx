@@ -87,7 +87,7 @@ export function EpisodesSheet({ title, visible, onClose }: EpisodesSheetProps) {
                   )}
                 </View>
                 <View className="flex-1">
-                  <Text numberOfLines={1} className="text-[15px] font-semibold text-white">
+                  <Text numberOfLines={1} className="text-[15px] text-white font-semibold">
                     {e.number}. {e.name}
                   </Text>
                   <Text className="mt-0.5 text-[12px] text-t3">

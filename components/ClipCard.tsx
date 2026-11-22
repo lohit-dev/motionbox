@@ -40,13 +40,13 @@ export function ClipCard({ title, clip, onPress }: ClipCardProps) {
         </View>
         <View className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5">
           <Text
-            className="text-[11px] font-semibold text-white"
+            className="text-[11px] text-white font-semibold"
             style={{ fontVariant: ['tabular-nums'] }}>
             {clip.length}
           </Text>
         </View>
       </View>
-      <Text numberOfLines={1} className="mt-2 text-[13px] font-semibold text-white">
+      <Text numberOfLines={1} className="mt-2 text-[13px] text-white font-semibold">
         {clip.title}
       </Text>
     </Pressable>

@@ -30,7 +30,7 @@ export function OfflineBanner({
       <Icon name="wifiOff" size={20} color={colors.t2} />
       <Text className="flex-1 text-[14px] leading-5 text-t2">{message}</Text>
       <Pressable accessibilityRole="button" onPress={onRetry} scale={0.94}>
-        <Text className="text-[14px] font-bold text-white">Retry</Text>
+        <Text className="text-[14px] text-white font-bold">Retry</Text>
       </Pressable>
     </Animated.View>
   );

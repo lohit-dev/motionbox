@@ -43,7 +43,7 @@ export default function Updates() {
   const section = (label: string, items: UpdateItem[]) =>
     items.length ? (
       <>
-        <Text className="mx-gutter mb-1 mt-7 text-eyebrow font-semibold uppercase text-t3">
+        <Text className="mx-gutter mb-1 mt-7 text-eyebrow uppercase text-t3 font-semibold">
           {label}
         </Text>
         {items.map(row)}
@@ -59,11 +59,11 @@ export default function Updates() {
           <CircleButton icon="back" label="Back" size={44} onPress={() => router.back()} />
           {updates.count ? (
             <Pressable accessibilityRole="button" scale={0.94} onPress={markUpdatesRead}>
-              <Text className="text-[14px] font-semibold text-white">Mark all read</Text>
+              <Text className="text-[14px] text-white font-semibold">Mark all read</Text>
             </Pressable>
           ) : null}
         </View>
-        <Text className="mt-4 px-gutter text-[32px] font-extrabold tracking-tighter text-white">
+        <Text className="mt-4 px-gutter text-[32px] tracking-tighter text-white font-extrabold">
           Updates
         </Text>
 

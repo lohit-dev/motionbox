@@ -33,27 +33,33 @@ export function Sheet({ visible, onClose, height = 520, title, children }: Sheet
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
-      y.value = height;
-      y.value = withTiming(0, { duration: 420, easing: fly });
+      if (!mounted) {
+        const frame = requestAnimationFrame(() => setMounted(true));
+        return () => cancelAnimationFrame(frame);
+      }
+      y.set(height);
+      y.set(withTiming(0, { duration: 420, easing: fly }));
     } else {
-      y.value = withTiming(height, { duration: 300, easing: ease }, (done) => {
-        if (done) runOnJS(setMounted)(false);
-      });
+      if (!mounted) return;
+      y.set(
+        withTiming(height, { duration: 300, easing: ease }, (done) => {
+          if (done) runOnJS(setMounted)(false);
+        })
+      );
     }
-  }, [visible, height, y]);
+  }, [visible, height, y, mounted]);
 
   const pan = Gesture.Pan()
     .onChange((e) => {
-      y.value = Math.max(0, y.value + e.changeY);
+      y.set(Math.max(0, y.get() + e.changeY));
     })
     .onEnd((e) => {
-      if (y.value > height * 0.25 || e.velocityY > 800) runOnJS(onClose)();
-      else y.value = withSpring(0, springs.soft);
+      if (y.get() > height * 0.25 || e.velocityY > 800) runOnJS(onClose)();
+      else y.set(withSpring(0, springs.soft));
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
-  const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, y.value / height) }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, y.get() / height) }));
 
   if (!mounted) return null;
 
@@ -83,7 +89,7 @@ export function Sheet({ visible, onClose, height = 520, title, children }: Sheet
           <GestureDetector gesture={pan}>
             <View collapsable={false} className="items-center pb-3 pt-2.5">
               <View className="h-1 w-10 rounded-full bg-white/30" />
-              {title ? <Text className="mt-4 text-xl font-bold text-white">{title}</Text> : null}
+              {title ? <Text className="mt-4 text-xl text-white font-bold">{title}</Text> : null}
             </View>
           </GestureDetector>
           {children}

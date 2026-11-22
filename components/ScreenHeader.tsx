@@ -16,7 +16,7 @@ export function ScreenHeader({ title, right }: ScreenHeaderProps) {
     <View
       className="flex-row items-center justify-between px-gutter pb-4"
       style={{ paddingTop: top + 12 }}>
-      <Text className="text-title font-extrabold text-white">{title}</Text>
+      <Text className="text-title text-white font-extrabold">{title}</Text>
       {right}
     </View>
   );

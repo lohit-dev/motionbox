@@ -32,7 +32,7 @@ const SORTS: { value: Sort; label: string }[] = [
 ];
 
 const Label = ({ children }: { children: string }) => (
-  <Text className="text-eyebrow font-semibold uppercase text-t3">{children}</Text>
+  <Text className="text-eyebrow uppercase text-t3 font-semibold">{children}</Text>
 );
 
 /** Filters. Genres can be combined, and results update behind the sheet as you change things. */
@@ -67,7 +67,7 @@ export function FilterSheet({
           <View className="flex-row items-center justify-between pt-1">
             <Label>Genre</Label>
             <Pressable accessibilityRole="button" scale={0.94} onPress={() => onChange(NO_FILTERS)}>
-              <Text className="text-[14px] font-semibold text-t2">Reset</Text>
+              <Text className="text-[14px] text-t2 font-semibold">Reset</Text>
             </Pressable>
           </View>
           <View className="mt-3 flex-row flex-wrap gap-2">
@@ -83,7 +83,7 @@ export function FilterSheet({
 
           <View className="mt-7 flex-row items-baseline justify-between">
             <Label>Minimum score</Label>
-            <Text className="text-[16px] font-bold text-white">{filters.minScore.toFixed(1)}</Text>
+            <Text className="text-[16px] text-white font-bold">{filters.minScore.toFixed(1)}</Text>
           </View>
           <Slider
             value={filters.minScore}

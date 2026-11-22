@@ -3,8 +3,6 @@ import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
-import { clamp } from '@/lib/format';
-
 interface ScrubberProps {
   /** 0 to 1 */
   progress: number;
@@ -16,6 +14,12 @@ interface ScrubberProps {
 
 const KNOB = 14;
 
+/** Keep this arithmetic local: gesture callbacks run on the UI runtime. */
+function clampFraction(value: number) {
+  'worklet';
+  return Math.min(1, Math.max(0, value));
+}
+
 /** Thin video scrubber: loaded part, played part and a knob. Drag or tap to seek. */
 export function Scrubber({ progress, buffered = 0, onSeek }: ScrubberProps) {
   const [width, setWidth] = useState(1);
@@ -23,12 +27,12 @@ export function Scrubber({ progress, buffered = 0, onSeek }: ScrubberProps) {
 
   const gesture = Gesture.Pan()
     .minDistance(0)
-    .onBegin((e) => runOnJS(setDrag)(clamp(e.x / width)))
-    .onUpdate((e) => runOnJS(setDrag)(clamp(e.x / width)))
-    .onEnd((e) => runOnJS(onSeek)(clamp(e.x / width)))
+    .onBegin((e) => runOnJS(setDrag)(clampFraction(e.x / width)))
+    .onUpdate((e) => runOnJS(setDrag)(clampFraction(e.x / width)))
+    .onEnd((e) => runOnJS(onSeek)(clampFraction(e.x / width)))
     .onFinalize(() => runOnJS(setDrag)(null));
 
-  const shown = drag ?? clamp(progress);
+  const shown = drag ?? clampFraction(progress);
   return (
     <GestureDetector gesture={gesture}>
       <View
@@ -40,7 +44,7 @@ export function Scrubber({ progress, buffered = 0, onSeek }: ScrubberProps) {
               position: 'absolute',
               height: 3,
               borderRadius: 2,
-              width: `${clamp(buffered) * 100}%`,
+              width: `${clampFraction(buffered) * 100}%`,
               backgroundColor: 'rgba(255,255,255,0.4)',
             }}
           />

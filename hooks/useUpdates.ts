@@ -18,6 +18,7 @@ export interface UpdateItem {
 }
 
 const DAY = 86400000;
+const EMPTY_TITLES: Title[] = [];
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const parse = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
@@ -37,27 +38,23 @@ export function useUpdates() {
     [saved, watching, reminders]
   );
   const key = ids.join(',');
-  const [titles, setTitles] = useState<Title[]>([]);
-  const [loading, setLoading] = useState(ids.length > 0 && hasTmdb());
+  const [result, setResult] = useState<{ key: string; titles: Title[] } | null>(null);
+  const active = ids.length > 0 && hasTmdb();
 
   useEffect(() => {
-    if (!hasTmdb() || !ids.length) {
-      setTitles([]);
-      setLoading(false);
-      return;
-    }
+    if (!active) return;
     let live = true;
-    setLoading(true);
     Promise.all(ids.map((id) => loadDetail(id).catch(() => null))).then((all) => {
       if (!live) return;
-      setTitles(all.filter((t): t is Title => !!t));
-      setLoading(false);
+      setResult({ key, titles: all.filter((t): t is Title => !!t) });
     });
     return () => {
       live = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [active, ids, key]);
+
+  const current = result?.key === key ? result : null;
+  const titles = current?.titles ?? EMPTY_TITLES;
 
   const items = useMemo(() => {
     const today = startOfDay(new Date());
@@ -122,5 +119,5 @@ export function useUpdates() {
   }, [titles]);
 
   const count = items.today.length + items.upcoming.length + items.earlier.length;
-  return { ...items, count, loading };
+  return { ...items, count, loading: active && !current };
 }

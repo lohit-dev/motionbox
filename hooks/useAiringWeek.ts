@@ -7,15 +7,16 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 /** Airing schedule per weekday (Sunday first). TMDB gives the day, not a clock time. */
 export function useAiringWeek(reloadKey = 0) {
-  const [schedule, setSchedule] = useState<AiringEntry[][]>([[], [], [], [], [], [], []]);
-  const [loading, setLoading] = useState(hasTmdb());
-  const [failed, setFailed] = useState(false);
+  const [result, setResult] = useState<{
+    key: number;
+    schedule: AiringEntry[][];
+    failed: boolean;
+  } | null>(null);
+  const configured = hasTmdb();
 
   useEffect(() => {
-    if (!hasTmdb()) return;
+    if (!configured) return;
     let live = true;
-    setLoading(true);
-    setFailed(false);
     const today = new Date();
     const days = DAYS.map((_, i) => {
       const date = new Date(today);
@@ -25,26 +26,31 @@ export function useAiringWeek(reloadKey = 0) {
     loadAiringWeek(days)
       .then((perDay) => {
         if (!live) return;
-        setSchedule(
-          perDay.map((day, i) =>
+        setResult({
+          key: reloadKey,
+          schedule: perDay.map((day, i) =>
             day.map((t) => ({
               id: t.id,
               episode: 'New episode',
               time: i === today.getDay() ? 'Airs today' : `Airs ${DAYS[i]}`,
             }))
-          )
-        );
-        setLoading(false);
+          ),
+          failed: false,
+        });
       })
       .catch(() => {
         if (!live) return;
-        setLoading(false);
-        setFailed(true);
+        setResult({ key: reloadKey, schedule: [[], [], [], [], [], [], []], failed: true });
       });
     return () => {
       live = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, configured]);
 
-  return { schedule, loading, failed };
+  const current = result?.key === reloadKey ? result : null;
+  return {
+    schedule: current?.schedule ?? [[], [], [], [], [], [], []],
+    loading: configured && !current,
+    failed: current?.failed ?? false,
+  };
 }

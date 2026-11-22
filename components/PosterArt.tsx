@@ -95,14 +95,14 @@ function GeneratedArt({
       <View className="absolute inset-0 items-center justify-center">
         <Text
           allowFontScaling={false}
-          className="font-extrabold text-white/15"
+          className="text-white/15 font-extrabold"
           style={{ fontSize: Math.min(width, height) * (big ? 0.62 : 0.8) }}>
           {name.trim().charAt(0).toUpperCase()}
         </Text>
       </View>
       {showName && big && height <= 280 ? (
         <View className="absolute inset-x-0 bottom-0 p-2.5">
-          <Text numberOfLines={2} className="text-[13px] font-bold leading-4 text-white">
+          <Text numberOfLines={2} className="text-[13px] leading-4 text-white font-bold">
             {name}
           </Text>
         </View>

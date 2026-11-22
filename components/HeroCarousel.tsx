@@ -282,7 +282,7 @@ const Slide = memo(function Slide({
           },
           hold,
         ]}>
-        <Animated.Text style={r0} className="text-eyebrow font-semibold uppercase text-t2">
+        <Animated.Text style={r0} className="text-eyebrow uppercase text-t2 font-semibold">
           {item.eyebrow}
         </Animated.Text>
         <Animated.View style={r1} className="w-full">
@@ -299,17 +299,17 @@ const Slide = memo(function Slide({
           {hasScore(title) ? (
             <View className="flex-row items-center gap-1">
               <Icon name="star" size={12} />
-              <Text className="text-[13px] font-semibold text-white">{title.score.toFixed(1)}</Text>
+              <Text className="text-[13px] text-white font-semibold">{title.score.toFixed(1)}</Text>
             </View>
           ) : null}
           {title.runtime ? <Text className="text-[13px] text-t2">{title.runtime}</Text> : null}
           {title.rating ? (
             <View className="rounded border border-white/30 px-1.5 py-px">
-              <Text className="text-[10.5px] font-semibold text-t2">{title.rating}</Text>
+              <Text className="text-[10.5px] text-t2 font-semibold">{title.rating}</Text>
             </View>
           ) : null}
         </Animated.View>
-        <Animated.Text style={r3} className="mt-1 font-normal text-[13px] text-t2">
+        <Animated.Text style={r3} className="mt-1 text-[13px] text-t2 font-normal">
           {genreLine(title, 2)}
         </Animated.Text>
         <Animated.View style={r4} className="mt-5 flex-row items-center gap-3">

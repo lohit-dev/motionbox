@@ -5,24 +5,32 @@ import type { Person, Title } from '@/types';
 
 export function usePerson(id: number) {
   const [state, setState] = useState<{
+    key: string;
     person?: Person;
     known: Title[];
-    loading: boolean;
     failed: boolean;
-  }>({ known: [], loading: hasTmdb(), failed: false });
+  } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const key = `${id}:${attempt}`;
+  const enabled = hasTmdb() && !!id;
 
   useEffect(() => {
-    if (!hasTmdb() || !id) return;
+    if (!enabled) return;
     let live = true;
-    setState((s) => ({ ...s, loading: true, failed: false }));
     loadPerson(id)
-      .then((res) => live && setState({ ...res, loading: false, failed: false }))
-      .catch(() => live && setState({ known: [], loading: false, failed: true }));
+      .then((res) => live && setState({ ...res, key, failed: false }))
+      .catch(() => live && setState({ key, known: [], failed: true }));
     return () => {
       live = false;
     };
-  }, [id, attempt]);
+  }, [id, key, enabled]);
 
-  return { ...state, retry: () => setAttempt((n) => n + 1) };
+  const current = state?.key === key ? state : null;
+  return {
+    person: current?.person,
+    known: current?.known ?? [],
+    loading: enabled && !current,
+    failed: current?.failed ?? false,
+    retry: () => setAttempt((n) => n + 1),
+  };
 }

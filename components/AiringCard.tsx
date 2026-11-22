@@ -50,7 +50,7 @@ export function AiringCard({ entry, title, reminded, onToggleReminder, onPress }
         <PosterArt title={title} width={56} height={84} radius={12} size="w342" />
       </Animated.View>
       <View className="flex-1">
-        <Text numberOfLines={1} className="text-lg font-bold tracking-tight text-white">
+        <Text numberOfLines={1} className="text-lg tracking-tight text-white font-bold">
           {title.name}
         </Text>
         <Text className="mt-1 text-[12.5px] text-t3">
@@ -59,10 +59,10 @@ export function AiringCard({ entry, title, reminded, onToggleReminder, onPress }
         {live ? (
           <View className="mt-1.5 flex-row items-center gap-2">
             <LiveDot />
-            <Text className="text-[15px] font-semibold text-live">Airing now</Text>
+            <Text className="text-[15px] text-live font-semibold">Airing now</Text>
           </View>
         ) : (
-          <Text className="mt-1.5 text-[15px] font-medium text-white">{entry.time}</Text>
+          <Text className="mt-1.5 text-[15px] text-white font-medium">{entry.time}</Text>
         )}
       </View>
       <CircleButton

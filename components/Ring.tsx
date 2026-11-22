@@ -37,7 +37,7 @@ export const Ring = memo(function Ring({ title, onPress }: RingProps) {
         style={{ width: 70, height: 70 }}>
         <PosterArt title={title} width={60} height={60} radius={30} size="w342" bordered={false} />
       </View>
-      <Text numberOfLines={1} className="mt-1.5 text-[11.5px] font-medium text-t2">
+      <Text numberOfLines={1} className="mt-1.5 text-[11.5px] text-t2 font-medium">
         {storyLabel(title.name)}
       </Text>
     </Pressable>
