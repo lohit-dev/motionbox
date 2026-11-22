@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -9,44 +9,51 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Text } from '@/components/ui/Text';
+import { Mark } from '@/components/Mark';
+import { Wordmark } from '@/components/Wordmark';
 import colors from '@/constants/colors';
 
-/** Short branded intro: "m." rises in, holds, then the whole layer fades off. */
+/** Same size the native splash draws the mark at (200pt wide image, mark is 680 of 1024) */
+const MARK = 133;
+
+/**
+ * Launch intro. The mark sits exactly where the native splash left it, the wordmark rises in
+ * under it, then the whole layer lifts away.
+ */
 export function LaunchSplash() {
   const [gone, setGone] = useState(false);
-  const mark = useSharedValue(0);
+  const word = useSharedValue(0);
   const layer = useSharedValue(1);
 
   useEffect(() => {
-    mark.value = withTiming(1, { duration: 520, easing: Easing.bezier(0.22, 1, 0.36, 1) });
+    word.value = withDelay(
+      150,
+      withTiming(1, { duration: 600, easing: Easing.bezier(0.22, 1, 0.36, 1) })
+    );
     layer.value = withDelay(
-      1100,
-      withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) }, (done) => {
+      1300,
+      withTiming(0, { duration: 420, easing: Easing.out(Easing.quad) }, (done) => {
         if (done) runOnJS(setGone)(true);
       })
     );
-  }, [mark, layer]);
+  }, [word, layer]);
 
-  const markStyle = useAnimatedStyle(() => ({
-    opacity: mark.value,
-    transform: [{ translateY: (1 - mark.value) * 14 }, { scale: 0.92 + mark.value * 0.08 }],
+  const wordStyle = useAnimatedStyle(() => ({
+    opacity: word.value,
+    transform: [{ translateY: (1 - word.value) * 12 }],
   }));
-  const layerStyle = useAnimatedStyle(() => ({ opacity: layer.value }));
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: layer.value,
+    transform: [{ scale: 1 + (1 - layer.value) * 0.08 }],
+  }));
 
   if (gone) return null;
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.layer, layerStyle]}>
-      <Animated.View style={markStyle}>
-        <View className="flex-row items-baseline">
-          <Text className="tracking-tighter text-white font-extrabold" style={styles.m}>
-            m
-          </Text>
-          <Text className="text-white font-extrabold" style={styles.m}>
-            .
-          </Text>
-        </View>
+      <Mark size={MARK} />
+      <Animated.View style={[{ marginTop: 26 }, wordStyle]}>
+        <Wordmark size={30} />
       </Animated.View>
     </Animated.View>
   );
@@ -59,5 +66,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 100,
   },
-  m: { fontSize: 72 },
 });

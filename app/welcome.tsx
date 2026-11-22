@@ -1,6 +1,14 @@
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/Text';
@@ -11,6 +19,7 @@ import { Pill } from '@/components/ui/Pill';
 import { useHome } from '@/hooks/useHome';
 import { ease } from '@/lib/motion';
 import { useApp } from '@/store/store';
+import type { Title } from '@/types';
 
 /** First launch: a wall of artwork and one white pill. */
 export default function Welcome() {
@@ -20,28 +29,16 @@ export default function Welcome() {
   const finish = useApp((s) => s.finishOnboarding);
   const col = (width - 40 - 16) / 3;
   const { trending } = useHome();
-  // Three columns of three posters. Quiet grey tiles hold the place until artwork arrives.
-  const wall = [0, 1, 2].map((c) => [0, 1, 2].map((r) => trending[c * 3 + r] ?? null));
+  // Three columns of four posters that drift past, the middle one the other way
+  const wall = [0, 1, 2].map((c) => [0, 1, 2, 3].map((r) => trending[c * 4 + r] ?? null));
 
   return (
     <View className="flex-1 bg-ink">
       <View
         className="flex-row gap-2 px-gutter"
-        style={{ height: height * 0.62, overflow: 'hidden', paddingTop: 56 }}>
+        style={{ height: height * 0.62, overflow: 'hidden' }}>
         {wall.map((c, ci) => (
-          <View key={ci} className="gap-2" style={{ marginTop: ci === 1 ? 40 : 0 }}>
-            {c.map((t, ri) =>
-              t ? (
-                <PosterArt key={t.id} title={t} width={col} height={col * 1.5} radius={14} />
-              ) : (
-                <View
-                  key={ri}
-                  className="bg-s1"
-                  style={{ width: col, height: col * 1.5, borderRadius: 14 }}
-                />
-              )
-            )}
-          </View>
+          <Drift key={ci} items={c} col={col} up={ci !== 1} seconds={ci === 1 ? 46 : 38} />
         ))}
       </View>
       <View
@@ -71,5 +68,51 @@ export default function Welcome() {
         </View>
       </Animated.View>
     </View>
+  );
+}
+
+const GAP = 8;
+
+/** One column of posters that scrolls forever. The list is drawn twice so the loop has no seam. */
+function Drift({
+  items,
+  col,
+  up,
+  seconds,
+}: {
+  items: (Title | null)[];
+  col: number;
+  up: boolean;
+  seconds: number;
+}) {
+  const loop = items.length * (col * 1.5 + GAP);
+  const y = useSharedValue(up ? 0 : -loop);
+
+  useEffect(() => {
+    y.value = up ? 0 : -loop;
+    y.value = withRepeat(
+      withTiming(up ? -loop : 0, { duration: seconds * 1000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  }, [y, loop, up, seconds]);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const tile = (t: Title | null, key: string) =>
+    t ? (
+      <PosterArt key={key} title={t} width={col} height={col * 1.5} radius={14} />
+    ) : (
+      <View
+        key={key}
+        className="bg-s1"
+        style={{ width: col, height: col * 1.5, borderRadius: 14 }}
+      />
+    );
+
+  return (
+    <Animated.View style={[{ gap: GAP, paddingTop: 56 }, style]}>
+      {items.map((t, i) => tile(t, `a${i}`))}
+      {items.map((t, i) => tile(t, `b${i}`))}
+    </Animated.View>
   );
 }
