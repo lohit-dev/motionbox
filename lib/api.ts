@@ -159,11 +159,11 @@ export async function loadFeed(kind: FeedKind, page: number) {
           : kind === 'rated'
             ? await tmdb<Page<TmdbResult>>(endpoints.topRated, { page })
             : await tmdb<Page<TmdbResult>>(endpoints.discoverMovies, {
-              page,
-              sort_by: 'popularity.desc',
-              'primary_release_date.gte': today,
-              with_release_type: '2|3',
-            });
+                page,
+                sort_by: 'popularity.desc',
+                'primary_release_date.gte': today,
+                with_release_type: '2|3',
+              });
   const results =
     kind === 'upcoming' ? res.results.filter((r) => (r.release_date ?? '') >= today) : res.results;
   return {

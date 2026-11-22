@@ -32,7 +32,7 @@ type Filter = 'all' | 'movie' | 'series';
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <View className="flex-1 items-center rounded-2xl bg-s1 py-3.5">
-      <Text className="text-[20px] font-extrabold text-white">{value}</Text>
+      <Text className="text-[20px] text-white font-extrabold">{value}</Text>
       <Text className="mt-0.5 text-[12px] text-t3">{label}</Text>
     </View>
   );
@@ -54,7 +54,9 @@ export default function Person() {
 
   return (
     <View className="flex-1 bg-ink">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 56 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 56 }}>
         {person && !loading ? (
           <View style={{ height: heroH }}>
             {photo ? (
@@ -70,7 +72,14 @@ export default function Person() {
             )}
             <View
               pointerEvents="none"
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: top + 70, opacity: 0.5 }}>
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: top + 70,
+                opacity: 0.5,
+              }}>
               <Fade from="top" hold={0.2} />
             </View>
             <View
@@ -79,7 +88,10 @@ export default function Person() {
               <Fade from="bottom" />
             </View>
             <View className="absolute bottom-1" style={{ left: 20, right: 20 }}>
-              <Text numberOfLines={2} className="text-[36px] font-extrabold tracking-tighter text-white" style={{ lineHeight: 38 }}>
+              <Text
+                numberOfLines={2}
+                className="text-[36px] tracking-tighter text-white font-extrabold"
+                style={{ lineHeight: 38 }}>
                 {person.name}
               </Text>
               {person.line ? (
@@ -132,7 +144,7 @@ export default function Person() {
                   ? person.bio
                   : `${person.bio.slice(0, Math.max(0, person.bio.lastIndexOf(' ', BIO_CUT)))}… `}
                 {person.bio.length > BIO_CUT * 1.4 ? (
-                  <Text className="font-bold text-white">{more ? '  Less' : 'More'}</Text>
+                  <Text className="text-white font-bold">{more ? '  Less' : 'More'}</Text>
                 ) : null}
               </Text>
             ) : null}
@@ -226,7 +238,7 @@ function CreditRow({ credit, newYear }: { credit: Credit; newYear: boolean }) {
   return (
     <View>
       {newYear ? (
-        <Text className="pb-2 pt-5 text-[13px] font-bold tracking-widest text-t3">
+        <Text className="pb-2 pt-5 text-[13px] tracking-widest text-t3 font-bold">
           {credit.year || 'TBA'}
         </Text>
       ) : null}
@@ -241,17 +253,19 @@ function CreditRow({ credit, newYear }: { credit: Credit; newYear: boolean }) {
           ) : null}
         </View>
         <View className="flex-1">
-          <Text numberOfLines={2} className="text-[15.5px] font-semibold text-white">
+          <Text numberOfLines={2} className="text-[15.5px] text-white font-semibold">
             {credit.name}
           </Text>
           <Text numberOfLines={1} className="mt-0.5 text-[13px] text-t3">
-            {[credit.kind === 'series' ? 'Series' : 'Movie', credit.role].filter(Boolean).join(' · ')}
+            {[credit.kind === 'series' ? 'Series' : 'Movie', credit.role]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         </View>
         {credit.score ? (
           <View className="flex-row items-center gap-1">
             <Icon name="star" size={13} color="#fff" />
-            <Text className="text-[13px] font-semibold text-white">{credit.score.toFixed(1)}</Text>
+            <Text className="text-[13px] text-white font-semibold">{credit.score.toFixed(1)}</Text>
           </View>
         ) : null}
         <Icon name="chevronRight" size={16} color="#6F6F6B" />

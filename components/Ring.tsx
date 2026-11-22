@@ -1,9 +1,10 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import { PosterArt } from '@/components/PosterArt';
 import { Pressable } from '@/components/ui/Pressable';
+import { useIsShortWatched } from '@/store/store';
 import type { Title } from '@/types';
 
 interface RingProps {
@@ -20,14 +21,13 @@ const storyLabel = (name: string) =>
 
 /** Story ring: white outline while there is something new, grey once seen. */
 export const Ring = memo(function Ring({ title, onPress }: RingProps) {
-  const [seen, setSeen] = useState(false);
+  const seen = useIsShortWatched(title.id);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title.name} trailer`}
       scale={0.92}
       onPress={() => {
-        setSeen(true);
         onPress?.(title);
       }}
       className="items-center"

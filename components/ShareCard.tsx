@@ -24,7 +24,11 @@ function status(title: Title) {
   return out ? 'Out now' : `Coming ${day}`;
 }
 
-function Shell({ children, art, onReady }: CardProps & { children: React.ReactNode; art: string | null }) {
+function Shell({
+  children,
+  art,
+  onReady,
+}: CardProps & { children: React.ReactNode; art: string | null }) {
   return (
     <View
       collapsable={false}
@@ -45,9 +49,17 @@ function Shell({ children, art, onReady }: CardProps & { children: React.ReactNo
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 330 }}>
         <Fade from="bottom" />
       </View>
-      <View style={{ position: 'absolute', top: 20, left: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 20,
+          left: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        }}>
         <Mark size={26} />
-        <Text className="text-[17px] font-extrabold tracking-tighter text-white">motion.</Text>
+        <Text className="text-[17px] tracking-tighter text-white font-extrabold">motion.</Text>
       </View>
       {children}
     </View>
@@ -69,13 +81,16 @@ export function TitleCard({ title, onReady }: CardProps & { title: Title }) {
           backgroundColor: '#fff',
           justifyContent: 'center',
         }}>
-        <Text className="text-[12.5px] font-bold text-ink">{status(title)}</Text>
+        <Text className="text-[12.5px] text-ink font-bold">{status(title)}</Text>
       </View>
       <View style={{ position: 'absolute', left: 20, right: 20, bottom: 22 }}>
-        <Text numberOfLines={2} className="text-[34px] font-extrabold tracking-tighter text-white" style={{ lineHeight: 36 }}>
+        <Text
+          numberOfLines={2}
+          className="text-[34px] tracking-tighter text-white font-extrabold"
+          style={{ lineHeight: 36 }}>
           {title.name}
         </Text>
-        <Text className="mt-2 text-[13.5px] font-medium text-t2">
+        <Text className="mt-2 text-[13.5px] text-t2 font-medium">
           {[hasScore(title) ? `★ ${title.score.toFixed(1)}` : '', genreLine(title), title.runtime]
             .filter(Boolean)
             .join('  ·  ')}
@@ -86,7 +101,9 @@ export function TitleCard({ title, onReady }: CardProps & { title: Title }) {
           </Text>
         ) : null}
         <View style={{ marginTop: 16, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' }} />
-        <Text className="mt-3 text-[12px] font-medium text-t3">Watch the trailer on Motion Box</Text>
+        <Text className="mt-3 text-[12px] text-t3 font-medium">
+          Watch the trailer on Motion Box
+        </Text>
       </View>
     </Shell>
   );
@@ -102,20 +119,25 @@ export function PersonCard({ person, onReady }: CardProps & { person: Person }) 
   return (
     <Shell art={imageUrl(person.photoPath, 'w780')} onReady={onReady}>
       <View style={{ position: 'absolute', left: 20, right: 20, bottom: 22 }}>
-        <Text numberOfLines={2} className="text-[34px] font-extrabold tracking-tighter text-white" style={{ lineHeight: 36 }}>
+        <Text
+          numberOfLines={2}
+          className="text-[34px] tracking-tighter text-white font-extrabold"
+          style={{ lineHeight: 36 }}>
           {person.name}
         </Text>
-        {person.line ? <Text className="mt-1.5 text-[13.5px] font-medium text-t2">{person.line}</Text> : null}
+        {person.line ? (
+          <Text className="mt-1.5 text-[13.5px] text-t2 font-medium">{person.line}</Text>
+        ) : null}
         <View style={{ marginTop: 16, flexDirection: 'row', gap: 28 }}>
           {stats.map(([value, label]) => (
             <View key={label}>
-              <Text className="text-[20px] font-extrabold text-white">{value}</Text>
+              <Text className="text-[20px] text-white font-extrabold">{value}</Text>
               <Text className="text-[11.5px] text-t3">{label}</Text>
             </View>
           ))}
         </View>
         <View style={{ marginTop: 16, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' }} />
-        <Text className="mt-3 text-[12px] font-medium text-t3">Find their work on Motion Box</Text>
+        <Text className="mt-3 text-[12px] text-t3 font-medium">Find their work on Motion Box</Text>
       </View>
     </Shell>
   );

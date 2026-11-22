@@ -25,7 +25,6 @@ import type { Title } from '@/types';
 
 export interface HeroSlide {
   title: Title;
-  eyebrow: string;
 }
 
 interface HeroCarouselProps {
@@ -246,7 +245,6 @@ const Slide = memo(function Slide({
   const r1 = useRise(scrollX, i, width, 1);
   const r2 = useRise(scrollX, i, width, 2);
   const r3 = useRise(scrollX, i, width, 3);
-  const r4 = useRise(scrollX, i, width, 4);
 
   // Every slide has its own tag (the loop mounts each title three times)
   const sharedTag = `hero-${i}-${title.id}`;
@@ -282,10 +280,7 @@ const Slide = memo(function Slide({
           },
           hold,
         ]}>
-        <Animated.Text style={r0} className="text-eyebrow uppercase text-t2 font-semibold">
-          {item.eyebrow}
-        </Animated.Text>
-        <Animated.View style={r1} className="w-full">
+        <Animated.View style={r0} className="w-full">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Open ${title.name}`}
@@ -295,7 +290,7 @@ const Slide = memo(function Slide({
             <TitleLogo title={title} maxWidth={width * 0.78} maxHeight={96} fontSize={42} />
           </Pressable>
         </Animated.View>
-        <Animated.View style={r2} className="mt-2 flex-row items-center gap-2.5">
+        <Animated.View style={r1} className="mt-2 flex-row items-center gap-2.5">
           {hasScore(title) ? (
             <View className="flex-row items-center gap-1">
               <Icon name="star" size={12} />
@@ -309,10 +304,10 @@ const Slide = memo(function Slide({
             </View>
           ) : null}
         </Animated.View>
-        <Animated.Text style={r3} className="mt-1 text-[13px] text-t2 font-normal">
+        <Animated.Text style={r2} className="mt-1 text-[13px] text-t2 font-normal">
           {genreLine(title, 2)}
         </Animated.Text>
-        <Animated.View style={r4} className="mt-5 flex-row items-center gap-3">
+        <Animated.View style={r3} className="mt-5 flex-row items-center gap-3">
           <CircleButton
             label={saved ? 'Remove from list' : 'Save to list'}
             active={saved}

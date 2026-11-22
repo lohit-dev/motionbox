@@ -16,6 +16,8 @@ export const LANGUAGES = [
 
 export interface AppState {
   saved: TitleId[];
+  shortsSaved: TitleId[];
+  shortsWatched: TitleId[];
   watching: TitleId[];
   watched: TitleId[];
   reminders: TitleId[];
@@ -32,6 +34,8 @@ export interface AppState {
   airingSegment: AiringSegment;
 
   toggleSave: (id: TitleId) => void;
+  toggleShortSave: (id: TitleId) => void;
+  markShortWatched: (id: TitleId) => void;
   toggleReminder: (id: TitleId) => void;
   toggleWatching: (id: TitleId) => void;
   markWatched: (id: TitleId) => void;
@@ -56,6 +60,8 @@ export const useApp = create<AppState>()(
   persist(
     (set) => ({
       saved: [],
+      shortsSaved: [],
+      shortsWatched: [],
       watching: [],
       watched: [],
       reminders: [],
@@ -70,6 +76,11 @@ export const useApp = create<AppState>()(
       airingSegment: 'all',
 
       toggleSave: (id) => set((s) => ({ saved: toggle(s.saved, id), updatesRead: false })),
+      toggleShortSave: (id) => set((s) => ({ shortsSaved: toggle(s.shortsSaved, id) })),
+      markShortWatched: (id) =>
+        set((s) =>
+          s.shortsWatched.includes(id) ? s : { shortsWatched: [id, ...s.shortsWatched] }
+        ),
       toggleReminder: (id) => set((s) => ({ reminders: toggle(s.reminders, id) })),
       toggleWatching: (id) =>
         set((s) => ({
@@ -105,7 +116,7 @@ export const useApp = create<AppState>()(
     }),
     {
       name: 'motionbox-v1',
-      version: 3,
+      version: 5,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persisted) => {
         const s = persisted as Record<string, unknown>;
@@ -115,6 +126,8 @@ export const useApp = create<AppState>()(
           );
         return {
           saved: ids(s.saved),
+          shortsSaved: ids(s.shortsSaved),
+          shortsWatched: ids(s.shortsWatched),
           watching: ids(s.watching),
           watched: ids(s.watched),
           reminders: ids(s.reminders),
@@ -131,6 +144,8 @@ export const useApp = create<AppState>()(
       // Keep what the person did; transient UI state starts fresh each launch
       partialize: (s) => ({
         saved: s.saved,
+        shortsSaved: s.shortsSaved,
+        shortsWatched: s.shortsWatched,
         watching: s.watching,
         watched: s.watched,
         reminders: s.reminders,
@@ -154,4 +169,6 @@ export function useHydrated() {
 }
 
 export const useIsSaved = (id: TitleId) => useApp((s) => s.saved.includes(id));
+export const useIsShortSaved = (id: TitleId) => useApp((s) => s.shortsSaved.includes(id));
+export const useIsShortWatched = (id: TitleId) => useApp((s) => s.shortsWatched.includes(id));
 export const useHasReminder = (id: TitleId) => useApp((s) => s.reminders.includes(id));

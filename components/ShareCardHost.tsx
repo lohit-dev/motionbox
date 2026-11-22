@@ -1,5 +1,6 @@
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentRef } from 'react';
 import { View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
@@ -12,7 +13,7 @@ import { registerShareHost, shareFallback, type ShareRequest } from '@/lib/share
  */
 export function ShareCardHost() {
   const [request, setRequest] = useState<ShareRequest | null>(null);
-  const card = useRef<View>(null);
+  const card = useRef<ComponentRef<typeof View>>(null);
   const busy = useRef(false);
 
   useEffect(() => {

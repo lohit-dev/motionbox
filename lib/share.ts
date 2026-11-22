@@ -26,6 +26,4 @@ export function sharePerson(person: Person) {
 }
 
 export const shareFallback = (request: ShareRequest) =>
-  plain(
-    `${request.kind === 'title' ? request.title.name : request.person.name} on Motion Box`
-  );
+  plain(`${request.kind === 'title' ? request.title.name : request.person.name} on Motion Box`);

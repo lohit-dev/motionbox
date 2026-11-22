@@ -33,18 +33,18 @@ export function Mark({ size = 120 }: { size?: number }) {
         strokeOpacity={0.2}
         strokeWidth={3}
       />
-        <Rect x={285.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={368.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={451.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={534.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={617.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={700.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={285.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={368.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={451.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={534.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={617.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
-        <Rect x={700.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={285.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={368.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={451.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={534.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={617.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={700.5} y={214} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={285.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={368.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={451.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={534.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={617.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
+      <Rect x={700.5} y={784} width={38} height={26} rx={8} fill="#fff" fillOpacity={0.2} />
       <Path transform="translate(256.58 713.15) scale(0.27 -0.27)" d={M_PATH} fill="url(#ink)" />
     </Svg>
   );

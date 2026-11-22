@@ -2,8 +2,8 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, ScrollView, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Image, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Scrubber } from '@/components/Scrubber';
@@ -18,11 +18,30 @@ import { findByClip } from '@/lib/titles';
 import { useApp, useIsSaved } from '@/store/store';
 import { openOnYouTube } from '@/lib/trailer';
 import { resolveStream } from '@/lib/youtube';
+import { setVideoQuality } from '@/lib/video';
 
 type State =
   | { phase: 'loading' }
   | { phase: 'ready'; uri: string; hls: boolean }
   | { phase: 'failed'; reason?: string };
+
+const INLINE_VIDEO_CONTAINER = {
+  height: 360,
+  backgroundColor: '#000',
+  overflow: 'hidden',
+} as const;
+const FULLSCREEN_VIDEO_CONTAINER = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  zIndex: 10,
+  elevation: 10,
+  backgroundColor: '#000',
+  overflow: 'hidden',
+} as const;
+const PLAYER_VIDEO_STYLE = { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 } as const;
 
 /** Full-screen trailer player. Plays the clip with expo-video and falls back to YouTube if it can't. */
 export default function Player() {
@@ -31,20 +50,17 @@ export default function Player() {
   const { top, left: insetL, right: insetR, bottom: insetB } = useSafeAreaInsets();
   const [state, setState] = useState<State>({ phase: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  const [loadedSourceKey, setLoadedSourceKey] = useState<string | null>(null);
+  const [firstFrameSourceKey, setFirstFrameSourceKey] = useState<string | null>(null);
+  const playingRef = useRef(true);
 
   useEffect(() => {
     let live = true;
     resolveStream(key)
       .then((stream) => live && setState({ phase: 'ready', uri: stream.uri, hls: stream.hls }))
       .catch((error) => {
-        if (__DEV__) {
-          console.error('[youtube] stream resolution failed', {
-            name: error?.name,
-            message: error?.message,
-            stack: error?.stack,
-            error,
-          });
-        }
+        if (__DEV__)
+          console.error('[youtube] stream resolution failed:', String(error?.message ?? error));
         if (live) setState({ phase: 'failed', reason: String(error?.message ?? error) });
       });
     return () => {
@@ -52,39 +68,96 @@ export default function Player() {
     };
   }, [key, attempt]);
 
-  const player = useVideoPlayer(
-    state.phase === 'ready'
-      ? { uri: state.uri, contentType: state.hls ? 'hls' : 'progressive' }
-      : null,
-    (p) => {
-      p.timeUpdateEventInterval = 0.25;
-      p.play();
-    }
-  );
+  const player = useVideoPlayer(null, (p) => {
+    p.timeUpdateEventInterval = 0.5;
+    setVideoQuality(p, 'auto');
+  });
+  const sourceUri = state.phase === 'ready' ? state.uri : null;
+  const sourceHls = state.phase === 'ready' && state.hls;
+  const sourceKey = sourceUri ? `${key}:${attempt}:${sourceUri}` : null;
 
-  // A stream that resolves but won't decode still ends up on the fallback screen
   useEffect(() => {
-    const sub = player.addListener('statusChange', ({ status, error }) => {
-      if (status === 'error') {
-        if (__DEV__) console.error('[youtube] Expo Video playback failed', error);
-        setState({ phase: 'failed', reason: 'The player could not decode the stream' });
-      }
+    if (!sourceUri) {
+      player.pause();
+      return;
+    }
+    let live = true;
+    const status = player.addListener('statusChange', ({ status: playerStatus, error }) => {
+      if (playerStatus !== 'error' || !live) return;
+      if (__DEV__) console.error('[video] playback failed:', String(error?.message ?? error));
+      setState({ phase: 'failed', reason: 'The player could not decode the stream' });
     });
-    return () => sub.remove();
-  }, [player]);
+    player.pause();
+    player
+      .replaceAsync({ uri: sourceUri, contentType: sourceHls ? 'hls' : 'progressive' })
+      .then(() => {
+        if (live && playingRef.current) player.play();
+      })
+      .catch((error) => {
+        if (live) setState({ phase: 'failed', reason: 'The stream could not be loaded' });
+      });
+    return () => {
+      live = false;
+      status.remove();
+      player.pause();
+    };
+  }, [player, sourceUri, sourceHls]);
+
+  const hlsReady = !!sourceUri && sourceHls;
+  useEffect(() => {
+    if (!sourceUri) return;
+    let live = true;
+    const expectedUri = sourceUri;
+    const expectedSourceKey = sourceKey;
+    const sub = player.addListener('sourceLoad', ({ videoSource, availableVideoTracks }) => {
+      const loadedUri =
+        typeof videoSource === 'string'
+          ? videoSource
+          : videoSource && typeof videoSource === 'object'
+            ? videoSource.uri
+            : null;
+      if (loadedUri && loadedUri !== expectedUri) return;
+      if (availableVideoTracks.length) {
+        setLoadedSourceKey(expectedSourceKey);
+        if (playingRef.current) player.play();
+        return;
+      }
+      if (!hlsReady) {
+        setState({ phase: 'failed', reason: 'The stream has no video track' });
+        return;
+      }
+      resolveStream(key, { preferDirect: true })
+        .then((stream) => {
+          if (live && !stream.hls) {
+            setState({ phase: 'ready', uri: stream.uri, hls: false });
+          }
+        })
+        .catch((error) => {
+          if (live)
+            setState({
+              phase: 'failed',
+              reason: String(error?.message ?? 'No playable MP4 found'),
+            });
+        });
+    });
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, [player, hlsReady, key, sourceUri, sourceKey]);
 
   // A failed load is retried quietly twice before the fallback screen is left for the person
-  const [auto, setAuto] = useState(0);
-  useEffect(() => setAuto(0), [key]);
+  const [retry, setRetry] = useState({ key, count: 0 });
+  const auto = retry.key === key ? retry.count : 0;
   useEffect(() => {
     if (state.phase !== 'failed' || auto >= 2) return;
     const t = setTimeout(() => {
-      setAuto((n) => n + 1);
+      setRetry({ key, count: auto + 1 });
       setState({ phase: 'loading' });
       setAttempt((n) => n + 1);
     }, 1200);
     return () => clearTimeout(t);
-  }, [state.phase, auto]);
+  }, [state.phase, auto, key]);
 
   const close = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -100,6 +173,19 @@ export default function Player() {
   const [pos, setPos] = useState({ time: 0, total: 0, loaded: 0 });
   const [controls, setControls] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  useEffect(() => {
+    if (!sourceUri || loadedSourceKey !== sourceKey) {
+      player.pause();
+      return;
+    }
+    if (playing) player.play();
+    else player.pause();
+  }, [player, playing, loadedSourceKey, sourceUri, sourceKey]);
 
   // Fullscreen turns the phone to landscape; leaving (or closing the player) puts it back
   useEffect(() => {
@@ -150,7 +236,7 @@ export default function Player() {
     player.seekBy(s);
     setControls(true);
   };
-  const ready = state.phase === 'ready';
+  const ready = !!sourceUri && firstFrameSourceKey === sourceKey;
   const left = Math.max(0, pos.total - pos.time);
 
   const goToDetails = () => {
@@ -169,37 +255,30 @@ export default function Player() {
   return (
     <View className="flex-1 bg-ink">
       {fullScreen ? <StatusBar hidden /> : null}
-      <View
-        style={
-          fullScreen
-            ? {
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 0,
-                zIndex: 10,
-                elevation: 10,
-                backgroundColor: '#000',
-                overflow: 'hidden',
-              }
-            : { height: 360, backgroundColor: '#000', overflow: 'hidden' }
-        }>
-        {ready ? (
+      <View style={fullScreen ? FULLSCREEN_VIDEO_CONTAINER : INLINE_VIDEO_CONTAINER}>
+        {sourceUri ? (
           <>
             <VideoView
               player={player}
-              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+              style={PLAYER_VIDEO_STYLE}
               contentFit="contain"
+              surfaceType={Platform.OS === 'android' ? 'textureView' : undefined}
               nativeControls={false}
               allowsPictureInPicture
+              onFirstFrameRender={() => setFirstFrameSourceKey(sourceKey)}
             />
-            <Pressable
-              accessibilityLabel="Show controls"
-              scale={1}
-              onPress={() => setControls((c) => !c)}
-              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-            />
+            {ready ? (
+              <Pressable
+                accessibilityLabel="Show controls"
+                scale={1}
+                onPress={() => setControls((c) => !c)}
+                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+              />
+            ) : (
+              <View className="absolute inset-0 items-center justify-center bg-black">
+                <ActivityIndicator color="#fff" size="large" />
+              </View>
+            )}
           </>
         ) : state.phase === 'loading' ? (
           <View className="flex-1 items-center justify-center">
@@ -214,7 +293,7 @@ export default function Player() {
               <Text className="mt-2 text-center text-[14.5px] leading-5 text-t2">
                 The trailer didn&apos;t load in the app. You can try again or watch it on YouTube.
               </Text>
-              {__DEV__ && state.reason ? (
+              {__DEV__ && state.phase === 'failed' && state.reason ? (
                 <Text className="mt-3 text-center text-[11px] leading-4 text-t3">
                   {state.reason}
                 </Text>

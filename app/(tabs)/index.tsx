@@ -30,8 +30,6 @@ const key = (t: Title) => t.id;
 const playTrailer = (t: Title) => {
   openTrailer(t);
 };
-const EYEBROWS = ['No. 1 this week', 'Trending now', 'Trending now', 'Popular this week'];
-
 export default function Home() {
   const router = useRouter();
   const { top } = useSafeAreaInsets();
@@ -53,10 +51,7 @@ export default function Home() {
   const updates = useUpdates();
 
   const slides = useMemo(
-    () =>
-      home.trending
-        .slice(0, 4)
-        .map((title, i) => ({ title, eyebrow: EYEBROWS[i] ?? 'Trending now' })),
+    () => home.trending.slice(0, 4).map((title) => ({ title })),
     [home.trending]
   );
   // Fresh trailers come from what's in cinemas now, and never repeat a hero slide

@@ -52,7 +52,8 @@
             "enableBundleCompression": true
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

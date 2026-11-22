@@ -4,8 +4,9 @@ import '../global.css';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { useEffect } from 'react';
-import { Platform, TurboModuleRegistry } from 'react-native';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,11 +14,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import { ShareCardHost } from '@/components/ShareCardHost';
-
-const AndroidSystemBars =
-  Platform.OS === 'android' && TurboModuleRegistry.get('RNEdgeToEdge')
-    ? require('react-native-edge-to-edge').SystemBars
-    : null;
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -33,7 +29,7 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.ink }}>
       <KeyboardProvider>
         <SafeAreaProvider>
-          {AndroidSystemBars ? <AndroidSystemBars style="light" /> : <StatusBar style="light" />}
+          {Platform.OS === 'android' ? <SystemBars style="light" /> : <StatusBar style="light" />}
           <Stack
             screenOptions={{
               headerShown: false,
@@ -42,7 +38,7 @@ export default function Layout() {
             }}>
             <Stack.Screen name="(tabs)" />
             {/* The card's poster flies into the hero: a native shared element transition */}
-            <Stack.Screen name="title/[id]" options={{ animation: 'fade' }} />
+            <Stack.Screen name="title/[id]" options={{ animation: 'fade', presentation: 'card' }} />
             <Stack.Screen name="all" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
