@@ -465,7 +465,7 @@ export default function TitleDetail() {
                   marginHorizontal: 12,
                   color: colors.white,
                   fontSize: 16,
-                  fontFamily: 'Geist-Bold',
+                  fontFamily: 'Inter24pt-Bold',
                 },
                 barTitle,
               ]}>
