@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
 import { PosterArt } from '@/components/PosterArt';
 import { hasScore, kindLine } from '@/lib/format';
+import { sz } from '@/lib/scale';
 import type { Title } from '@/types';
 
 interface PosterProps {
@@ -24,7 +25,7 @@ interface PosterProps {
 
 function PosterBase({
   title,
-  width = 112,
+  width = sz(112),
   tag,
   date,
   showScore = false,

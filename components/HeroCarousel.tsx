@@ -54,8 +54,9 @@ export function HeroCarousel({
   scrollY,
   interval = 6000,
 }: HeroCarouselProps) {
-  const { width } = useWindowDimensions();
-  const height = Math.min(heroHeightFor(width), 560);
+  const { width, height: screen } = useWindowDimensions();
+  // About two thirds of the screen, so a short phone and a tall one both leave the first row peeking
+  const height = Math.round(Math.min(heroHeightFor(width), Math.max(440, Math.min(screen * 0.64, 620))));
   const n = slides.length;
   const looped = useMemo(() => [...slides, ...slides, ...slides], [slides]);
   const list = useRef<Animated.FlatList<HeroSlide>>(null);

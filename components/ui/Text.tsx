@@ -14,6 +14,8 @@ const HAS_WEIGHT = /(^|\s)font-(normal|medium|semibold|bold|extrabold)(\s|$)/;
 export function Text({ className = '', ...rest }: Props) {
   return (
     <RNText
+      // Phones with a large system font size would otherwise break the layout
+      maxFontSizeMultiplier={1.15}
       {...rest}
       className={HAS_WEIGHT.test(className) ? className : `font-normal ${className}`}
     />

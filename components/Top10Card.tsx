@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import Svg, { Text as SvgText } from 'react-native-svg';
 
 import { Poster } from '@/components/Poster';
+import { sz } from '@/lib/scale';
 import type { Title } from '@/types';
 
 interface Top10CardProps {
@@ -10,10 +11,10 @@ interface Top10CardProps {
   onPress?: (title: Title, tag: string) => void;
 }
 
-const POSTER = 104;
+const POSTER = sz(104);
 /** Part of the numeral that overlaps the poster's left edge */
-const TUCK = 22;
-const NUMERAL = 132;
+const TUCK = sz(22);
+const NUMERAL = sz(132);
 /** Distance from the top of the numeral box down to the digits' baseline */
 const BASELINE = Math.round(NUMERAL * 0.78);
 
@@ -23,7 +24,7 @@ const BASELINE = Math.round(NUMERAL * 0.78);
  * card is the same size and the row lines up whatever the digit count.
  */
 export function Top10Card({ rank, title, onPress }: Top10CardProps) {
-  const slot = rank >= 10 ? 142 : 86;
+  const slot = sz(rank >= 10 ? 142 : 86);
   return (
     <View style={{ width: slot - TUCK + POSTER, paddingLeft: slot - TUCK }}>
       <Poster title={title} width={POSTER} onPress={onPress} />

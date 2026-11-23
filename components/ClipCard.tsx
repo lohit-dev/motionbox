@@ -4,6 +4,7 @@ import { Text } from '@/components/ui/Text';
 import { PosterArt } from '@/components/PosterArt';
 import { Icon } from '@/components/ui/Icon';
 import { Pressable } from '@/components/ui/Pressable';
+import { sz } from '@/lib/scale';
 import type { Clip, Title } from '@/types';
 
 interface ClipCardProps {
@@ -31,7 +32,7 @@ export function ClipCard({ title, clip, onPress }: ClipCardProps) {
             />
           </View>
         ) : (
-          <PosterArt title={title} width={220} height={124} radius={16} />
+          <PosterArt title={title} width={sz(220)} height={sz(124)} radius={16} />
         )}
         <View className="absolute inset-0 items-center justify-center">
           <View className="h-11 w-11 items-center justify-center rounded-full bg-black/55 pl-0.5">
