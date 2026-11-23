@@ -24,6 +24,7 @@ import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { Text } from '@/components/ui/Text';
+import colors from '@/constants/colors';
 import { useTitle } from '@/hooks/useTitle';
 import { genreLine, hasScore } from '@/lib/format';
 import { openTitle } from '@/lib/flight';
@@ -57,6 +58,7 @@ export default function Shorts() {
   const [quality, setQuality] = useState<StreamQuality>('auto');
   const [qualityOptionsById, setQualityOptionsById] = useState<Record<string, StreamQuality[]>>({});
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
+  const [qualityOpen, setQualityOpen] = useState(false);
   const list = useRef<FlatList<string>>(null);
   const progress = useSharedValue(0);
 
@@ -121,8 +123,6 @@ export default function Shorts() {
         height={height}
         bottomInset={bottom}
         quality={quality}
-        qualityOptions={qualityOptionsById[item] ?? ['auto']}
-        onQualityChange={setQuality}
         onQualityOptionsChange={(options) => updateQualityOptions(item, options)}
         onNoPortrait={skipWithoutPortrait}
         active={focused && i === index}
@@ -136,7 +136,6 @@ export default function Shorts() {
       height,
       bottom,
       quality,
-      qualityOptionsById,
       updateQualityOptions,
       skipWithoutPortrait,
       index,
@@ -196,9 +195,31 @@ export default function Shorts() {
             <Chip label="New" selected={tab === 'new'} onPress={() => switchTab('new')} />
             <Chip label="Saved" selected={tab === 'saved'} onPress={() => switchTab('saved')} />
           </View>
-          <CircleButton icon="close" label="Close" size={40} tone="glass" onPress={close} />
+          <View className="flex-row items-center gap-2">
+            {feed.length ? (
+              <CircleButton
+                icon="filter"
+                label={`Video quality, ${quality}`}
+                size={40}
+                tone="glass"
+                onPress={() => setQualityOpen(true)}
+              />
+            ) : null}
+            <CircleButton icon="close" label="Close" size={40} tone="glass" onPress={close} />
+          </View>
         </View>
       </View>
+
+      <ActionSheet
+        visible={qualityOpen}
+        title="Video quality"
+        onClose={() => setQualityOpen(false)}
+        rows={(qualityOptionsById[feed[index]] ?? ['auto']).map((value) => ({
+          label: value === 'auto' ? 'Auto' : value,
+          icon: quality === value ? ('check' as const) : undefined,
+          onPress: () => setQuality(value),
+        }))}
+      />
     </View>
   );
 }
@@ -243,8 +264,6 @@ interface PageProps {
   height: number;
   bottomInset: number;
   quality: StreamQuality;
-  qualityOptions: StreamQuality[];
-  onQualityChange: (quality: StreamQuality) => void;
   onQualityOptionsChange: (options: StreamQuality[]) => void;
   active: boolean;
   paused: boolean;
@@ -259,8 +278,6 @@ function Page({
   height,
   bottomInset,
   quality,
-  qualityOptions,
-  onQualityChange,
   onQualityOptionsChange,
   active,
   paused,
@@ -274,7 +291,6 @@ function Page({
   const reminded = useHasReminder(id);
   const toggleSave = useApp((s) => s.toggleShortSave);
   const toggleReminder = useApp((s) => s.toggleReminder);
-  const [qualityOpen, setQualityOpen] = useState(false);
 
   if (!title) return <View style={{ height, backgroundColor: '#000' }} />;
 
@@ -328,85 +344,65 @@ function Page({
         <Fade from="bottom" />
       </View>
 
-      <View className="absolute right-4 items-center gap-5" style={{ bottom: bottomInset + 122 }}>
-        <Action label="Save">
-          <CircleButton
-            icon={saved ? 'check' : 'plus'}
-            label="Save"
-            size={48}
-            tone="glass"
-            active={saved}
-            onPress={() => toggleSave(id)}
-          />
-        </Action>
-        <Action label={quality === 'auto' ? 'Auto' : quality}>
-          <CircleButton
-            icon="filter"
-            label={`Video quality, ${quality}`}
-            size={48}
-            tone="glass"
-            onPress={() => setQualityOpen(true)}
-          />
-        </Action>
-        <Action label="Remind">
-          <CircleButton
-            icon="bell"
-            label="Remind me"
-            size={48}
-            tone="glass"
-            active={reminded}
-            onPress={() => toggleReminder(id)}
-          />
-        </Action>
-        <Action label="Share">
-          <CircleButton
-            icon="share"
-            label="Share"
-            size={48}
-            tone="glass"
-            onPress={() => shareTitle(title)}
-          />
-        </Action>
-      </View>
-
-      <View className="absolute left-5 right-5" style={{ bottom: Math.max(12, bottomInset - 18) }}>
-        <View style={{ marginRight: 84 }}>
+      {/* Words on the left, actions on the right; the last action lines up with View details */}
+      <View
+        className="absolute left-5 right-5 flex-row items-end gap-3"
+        style={{ bottom: Math.max(12, bottomInset - 18) }}>
+        <View className="flex-1">
           <View style={{ alignItems: 'flex-start' }}>
             <TitleLogo title={title} maxWidth={250} maxHeight={84} fontSize={44} />
           </View>
-          <Text className="mt-2.5 text-[14px] text-white font-medium">
+          <Text className="mt-3 text-[14px] text-white font-medium">
             {[hasScore(title) ? `★ ${title.score.toFixed(1)}` : '', genreLine(title, 3)]
               .filter(Boolean)
               .join('  ·  ')}
           </Text>
-          {title.tagline || title.story ? (
-            <Text numberOfLines={2} className="mt-2.5 text-[14px] leading-[20px] text-t2">
-              {title.tagline || title.story}
+          {title.tagline ? (
+            <Text
+              numberOfLines={2}
+              className="mt-3 text-xl leading-[26px] text-white font-semibold">
+              {title.tagline}
             </Text>
           ) : null}
+          {title.story ? (
+            <Text
+              numberOfLines={2}
+              className={`${title.tagline ? 'mt-1.5' : 'mt-3'} text-[14px] leading-5 text-t2`}>
+              {title.story}
+            </Text>
+          ) : null}
+          <Pill title="View details" onPress={() => openTitle(title)} className="mt-5 w-full" />
         </View>
-        <Pill title="View details" onPress={() => openTitle(title)} className="mt-4 w-full" />
+
+        <View className="gap-3">
+          <CircleButton
+            label="Save"
+            size={56}
+            tone="glass"
+            active={saved}
+            onPress={() => toggleSave(id)}>
+            <Icon
+              name={saved ? 'check' : 'plus'}
+              size={24}
+              color={saved ? colors.ink : colors.white}
+            />
+          </CircleButton>
+          <CircleButton
+            label="Remind me"
+            size={56}
+            tone="glass"
+            active={reminded}
+            onPress={() => toggleReminder(id)}>
+            <Icon name="bell" size={24} color={reminded ? colors.ink : colors.white} />
+          </CircleButton>
+          <CircleButton label="Share" size={56} tone="glass" onPress={() => shareTitle(title)}>
+            <Icon name="share" size={24} color={colors.white} />
+          </CircleButton>
+        </View>
       </View>
-      <ActionSheet
-        visible={qualityOpen}
-        title="Video quality"
-        onClose={() => setQualityOpen(false)}
-        rows={qualityOptions.map((value) => ({
-          label: value === 'auto' ? 'Auto' : value,
-          icon: quality === value ? ('check' as const) : undefined,
-          onPress: () => onQualityChange(value),
-        }))}
-      />
     </View>
   );
 }
-
-const Action = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <View className="items-center">
-    {children}
-    <Text className="mt-1.5 text-[12px] text-white font-medium">{label}</Text>
-  </View>
-);
 
 /** Full-bleed artwork for the page */
 function PosterFill({ title, height }: { title: Title; height: number }) {
