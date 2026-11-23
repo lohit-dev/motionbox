@@ -466,6 +466,21 @@ export default function Player() {
               />
               {ready ? (
                 <CircleButton
+                  label={`Playback speed ${speed} times`}
+                  size={40}
+                  tone="glass"
+                  onPress={() => {
+                    setSpeed(
+                      (v) =>
+                        SPEEDS[(SPEEDS.indexOf(v as (typeof SPEEDS)[number]) + 1) % SPEEDS.length]
+                    );
+                    setControls(true);
+                  }}>
+                  <Text className="text-[13px] tabular-nums text-white font-bold">{speed}×</Text>
+                </CircleButton>
+              ) : null}
+              {ready ? (
+                <CircleButton
                   icon="fullscreen"
                   label="Fullscreen"
                   size={40}
@@ -527,16 +542,6 @@ export default function Player() {
                   <Text className="text-[12px] tabular-nums text-white font-medium">
                     {clock(pos.time)}
                   </Text>
-                  <Pressable
-                    accessibilityLabel={`Playback speed ${speed} times`}
-                    scale={0.94}
-                    onPress={() => {
-                      setSpeed((v) => SPEEDS[(SPEEDS.indexOf(v as (typeof SPEEDS)[number]) + 1) % SPEEDS.length]);
-                      setControls(true);
-                    }}
-                    className="rounded-full bg-white/15 px-3 py-1">
-                    <Text className="text-[12px] tabular-nums text-white font-semibold">{speed}×</Text>
-                  </Pressable>
                   <Text className="text-[12px] tabular-nums text-t2 font-medium">
                     −{clock(left)}
                   </Text>
