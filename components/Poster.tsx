@@ -1,4 +1,4 @@
-import { memo, useId } from 'react';
+import { memo, useId, type ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -19,6 +19,8 @@ interface PosterProps {
   date?: string;
   showScore?: boolean;
   subtitle?: string;
+  /** Drawn over the artwork, clipped to it, for example the Top 10 numeral */
+  overlay?: ReactNode;
   /** Receives the shared transition tag of this poster, so the detail hero can take over from it */
   onPress?: (title: Title, tag: string) => void;
 }
@@ -30,6 +32,7 @@ function PosterBase({
   date,
   showScore = false,
   subtitle,
+  overlay,
   onPress,
 }: PosterProps) {
   // One tag per card on screen: the same title can sit in several rails at once
@@ -45,6 +48,13 @@ function PosterBase({
         <Animated.View sharedTransitionTag={sharedTag} style={{ width, height: width * 1.5 }}>
           <PosterArt title={title} width={width} height={width * 1.5} />
         </Animated.View>
+        {overlay ? (
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, overflow: 'hidden' }}>
+            {overlay}
+          </View>
+        ) : null}
         {showScore && hasScore(title) ? (
           <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-full bg-black/65 px-2 py-1">
             <Icon name="star" size={10} />

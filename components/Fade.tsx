@@ -6,7 +6,7 @@ import colors from '@/constants/colors';
 
 interface FadeProps {
   /** Which edge is solid ink. The gradient runs to transparent on the other side. */
-  from?: 'bottom' | 'top';
+  from?: 'bottom' | 'top' | 'left';
   /** 0-1: how far the solid colour reaches before it starts to fade */
   hold?: number;
 }
@@ -17,11 +17,12 @@ interface FadeProps {
  */
 export function Fade({ from = 'bottom', hold = 0.12 }: FadeProps) {
   const id = `fade${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
-  const solidAtTop = from === 'top';
+  const solidAtTop = from === 'top' || from === 'left';
+  const sideways = from === 'left';
   return (
     <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
       <Defs>
-        <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={id} x1="0" y1="0" x2={sideways ? 1 : 0} y2={sideways ? 0 : 1}>
           <Stop offset={0} stopColor={colors.ink} stopOpacity={solidAtTop ? 1 : 0} />
           <Stop
             offset={solidAtTop ? hold : 0.3}
