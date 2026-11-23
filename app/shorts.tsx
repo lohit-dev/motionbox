@@ -347,7 +347,7 @@ function Page({
       {/* Words on the left, actions on the right; the last action lines up with View details */}
       <View
         className="absolute left-5 right-5 flex-row items-end gap-3"
-        style={{ bottom: Math.max(12, bottomInset - 18) }}>
+        style={{ bottom: Math.max(24, bottomInset + 14) }}>
         <View className="flex-1">
           <View style={{ alignItems: 'flex-start' }}>
             <TitleLogo title={title} maxWidth={250} maxHeight={84} fontSize={44} />

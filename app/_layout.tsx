@@ -38,16 +38,24 @@ export default function Layout() {
             }}>
             <Stack.Screen name="(tabs)" />
             {/* The card's poster flies into the hero: a native shared element transition */}
-            <Stack.Screen name="title/[id]" options={{ animation: 'fade', presentation: 'card' }} />
-            <Stack.Screen name="all" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen
+              name="title/[id]"
+              options={{
+                animation: Platform.OS === 'android' ? 'fade_from_bottom' : 'fade',
+                animationDuration: Platform.OS === 'android' ? 240 : undefined,
+                presentation: 'card',
+              }}
+            />
+            <Stack.Screen name="all" options={{ animation: 'slide_from_right', animationDuration: 260 }} />
             <Stack.Screen name="updates" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="person/[id]" options={{ animation: 'slide_from_right', animationDuration: 260 }} />
             <Stack.Screen
               name="shorts"
               options={{
                 presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
+                animation: Platform.OS === 'android' ? 'fade_from_bottom' : 'slide_from_bottom',
+                animationDuration: Platform.OS === 'android' ? 240 : undefined,
                 contentStyle: { backgroundColor: '#000' },
               }}
             />

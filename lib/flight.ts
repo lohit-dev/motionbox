@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
 
 import type { Title } from '@/types';
 
@@ -17,7 +18,7 @@ export function openTitle(title: Pick<Title, 'id'>, tag?: string) {
   const now = Date.now();
   if (now - lastOpen < 600) return;
   lastOpen = now;
-  router.push({ pathname: '/title/[id]', params: tag ? { id: title.id, tag } : { id: title.id } });
+  router.push({ pathname: '/title/[id]', params: tag && Platform.OS === 'ios' ? { id: title.id, tag } : { id: title.id } });
 }
 
 /** Closes the detail. The stack plays the shared transition backwards on its own. */
