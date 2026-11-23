@@ -3,9 +3,19 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, Platform, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  BackHandler,
+  Image,
+  Platform,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Fade } from '@/components/Fade';
 import { Scrubber } from '@/components/Scrubber';
 import { CircleButton } from '@/components/ui/CircleButton';
 import { Icon } from '@/components/ui/Icon';
@@ -25,11 +35,7 @@ type State =
   | { phase: 'ready'; uri: string; hls: boolean }
   | { phase: 'failed'; reason?: string };
 
-const INLINE_VIDEO_CONTAINER = {
-  height: 360,
-  backgroundColor: '#000',
-  overflow: 'hidden',
-} as const;
+const SPEEDS = [1, 1.25, 1.5, 2, 0.5] as const;
 const FULLSCREEN_VIDEO_CONTAINER = {
   position: 'absolute',
   top: 0,
@@ -41,13 +47,13 @@ const FULLSCREEN_VIDEO_CONTAINER = {
   backgroundColor: '#000',
   overflow: 'hidden',
 } as const;
-const PLAYER_VIDEO_STYLE = { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 } as const;
 
 /** Full-screen trailer player. Plays the clip with expo-video and falls back to YouTube if it can't. */
 export default function Player() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const router = useRouter();
   const { top, left: insetL, right: insetR, bottom: insetB } = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
   const [state, setState] = useState<State>({ phase: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [loadedSourceKey, setLoadedSourceKey] = useState<string | null>(null);
@@ -166,13 +172,38 @@ export default function Player() {
 
   // What is playing, for the details under the video
   const title = findByClip(key);
-  const clip = title?.clips?.find((c) => c.key === key);
   const saved = useIsSaved(title?.id ?? '');
   const toggleSave = useApp((s) => s.toggleSave);
   const [playing, setPlaying] = useState(true);
   const [pos, setPos] = useState({ time: 0, total: 0, loaded: 0 });
   const [controls, setControls] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
+  const [buffering, setBuffering] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const lastTap = useRef({ side: '', at: 0 });
+  const [flash, setFlash] = useState<'back' | 'forward' | null>(null);
+
+  // Spinner while the video waits for data, and a replay button once it has played to the end
+  useEffect(() => {
+    const status = player.addListener('statusChange', ({ status: s }) => setBuffering(s === 'loading'));
+    const end = player.addListener('playToEnd', () => {
+      setEnded(true);
+      setControls(true);
+    });
+    const play = player.addListener('playingChange', (e) => {
+      if (e.isPlaying) setEnded(false);
+    });
+    return () => {
+      status.remove();
+      end.remove();
+      play.remove();
+    };
+  }, [player]);
+
+  useEffect(() => {
+    player.playbackRate = speed;
+  }, [player, speed]);
 
   useEffect(() => {
     playingRef.current = playing;
@@ -236,6 +267,33 @@ export default function Player() {
     player.seekBy(s);
     setControls(true);
   };
+  const togglePlay = () => {
+    if (ended) {
+      player.currentTime = 0;
+      player.play();
+      setEnded(false);
+    } else if (playing) player.pause();
+    else player.play();
+    setControls(true);
+  };
+  // One tap shows or hides the controls; two quick taps on a side skip 10 seconds that way
+  const tapSide = (side: 'back' | 'forward') => {
+    const now = Date.now();
+    if (lastTap.current.side === side && now - lastTap.current.at < 320) {
+      lastTap.current = { side: '', at: 0 };
+      player.seekBy(side === 'back' ? -10 : 10);
+      setFlash(side);
+      setTimeout(() => setFlash(null), 450);
+      return;
+    }
+    lastTap.current = { side, at: now };
+    setTimeout(() => {
+      if (lastTap.current.side === side && lastTap.current.at === now) setControls((c) => !c);
+    }, 330);
+  };
+  const frameTop = fullScreen ? 0 : top;
+  const inlineHeight = top + Math.round((screenW * 9) / 16);
+  const videoBox = { position: 'absolute', top: frameTop, bottom: 0, left: 0, right: 0 } as const;
   const ready = !!sourceUri && firstFrameSourceKey === sourceKey;
   const left = Math.max(0, pos.total - pos.time);
 
@@ -254,13 +312,22 @@ export default function Player() {
 
   return (
     <View className="flex-1 bg-ink">
-      {fullScreen ? <StatusBar hidden /> : null}
-      <View style={fullScreen ? FULLSCREEN_VIDEO_CONTAINER : INLINE_VIDEO_CONTAINER}>
+      {Platform.OS === 'android' ? (
+        <SystemBars hidden={fullScreen ? { statusBar: true, navigationBar: true } : false} />
+      ) : fullScreen ? (
+        <StatusBar hidden />
+      ) : null}
+      <View
+        style={
+          fullScreen
+            ? FULLSCREEN_VIDEO_CONTAINER
+            : { height: inlineHeight, backgroundColor: '#000', overflow: 'hidden' }
+        }>
         {sourceUri ? (
           <>
             <VideoView
               player={player}
-              style={PLAYER_VIDEO_STYLE}
+              style={videoBox}
               contentFit="contain"
               surfaceType={Platform.OS === 'android' ? 'textureView' : undefined}
               nativeControls={false}
@@ -268,12 +335,20 @@ export default function Player() {
               onFirstFrameRender={() => setFirstFrameSourceKey(sourceKey)}
             />
             {ready ? (
-              <Pressable
-                accessibilityLabel="Show controls"
-                scale={1}
-                onPress={() => setControls((c) => !c)}
-                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-              />
+              <View style={[videoBox, { flexDirection: 'row' }]}>
+                <Pressable
+                  accessibilityLabel="Show controls, double tap to go back 10 seconds"
+                  scale={1}
+                  onPress={() => tapSide('back')}
+                  style={{ flex: 1 }}
+                />
+                <Pressable
+                  accessibilityLabel="Show controls, double tap to go forward 10 seconds"
+                  scale={1}
+                  onPress={() => tapSide('forward')}
+                  style={{ flex: 1 }}
+                />
+              </View>
             ) : (
               <View className="absolute inset-0 items-center justify-center bg-black">
                 <ActivityIndicator color="#fff" size="large" />
@@ -281,11 +356,11 @@ export default function Player() {
             )}
           </>
         ) : state.phase === 'loading' ? (
-          <View className="flex-1 items-center justify-center">
+          <View className="flex-1 items-center justify-center" style={{ paddingTop: frameTop }}>
             <ActivityIndicator color="#fff" size="large" />
           </View>
         ) : (
-          <View className="flex-1 items-center justify-center">
+          <View className="flex-1 items-center justify-center" style={{ paddingTop: frameTop }}>
             <View className="items-center px-10">
               <Text className="text-center text-xl text-white font-bold">
                 Can&apos;t play this here
@@ -313,6 +388,24 @@ export default function Player() {
           </View>
         )}
 
+        {flash ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: frameTop,
+              bottom: 0,
+              justifyContent: 'center',
+              ...(flash === 'back' ? { left: '14%' } : { right: '14%' }),
+            }}>
+            <View className="rounded-full bg-black/55 px-4 py-2">
+              <Text className="text-[14px] tabular-nums text-white font-semibold">
+                {flash === 'back' ? '−10s' : '+10s'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <View
           pointerEvents={controls || !ready ? 'box-none' : 'none'}
           style={{
@@ -323,6 +416,16 @@ export default function Player() {
             right: 0,
             opacity: controls || !ready ? 1 : 0,
           }}>
+          {ready ? (
+            <>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 120, opacity: 0.7 }}>
+                <Fade from="top" hold={0.1} />
+              </View>
+              <View pointerEvents="none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, opacity: 0.8 }}>
+                <Fade from="bottom" hold={0.1} />
+              </View>
+            </>
+          ) : null}
           <View
             pointerEvents="box-none"
             className="absolute flex-row items-center justify-between"
@@ -380,23 +483,28 @@ export default function Player() {
             <>
               <View
                 pointerEvents="box-none"
-                className="absolute inset-0 flex-row items-center justify-center gap-10">
+                className="absolute inset-0 flex-row items-center justify-center gap-10"
+                style={{ paddingTop: frameTop }}>
                 <Pressable accessibilityLabel="Back 10 seconds" onPress={() => seekBy(-10)}>
-                  <Icon name="replay10" size={30} />
+                  <Icon name="replay10" size={32} />
                 </Pressable>
                 <Pressable
-                  accessibilityLabel={playing ? 'Pause' : 'Play'}
+                  accessibilityLabel={ended ? 'Replay' : playing ? 'Pause' : 'Play'}
                   scale={0.94}
-                  onPress={() => {
-                    if (playing) player.pause();
-                    else player.play();
-                    setControls(true);
-                  }}
-                  className="h-16 w-16 items-center justify-center rounded-full bg-white">
-                  <Icon name={playing ? 'pause' : 'play'} size={24} color="#0B0B0A" />
+                  onPress={togglePlay}
+                  className="h-[68px] w-[68px] items-center justify-center rounded-full bg-white">
+                  {buffering && !ended ? (
+                    <ActivityIndicator color="#0B0B0A" />
+                  ) : (
+                    <Icon
+                      name={ended ? 'replay10' : playing ? 'pause' : 'play'}
+                      size={26}
+                      color="#0B0B0A"
+                    />
+                  )}
                 </Pressable>
                 <Pressable accessibilityLabel="Forward 10 seconds" onPress={() => seekBy(10)}>
-                  <Icon name="forward10" size={30} />
+                  <Icon name="forward10" size={32} />
                 </Pressable>
               </View>
 
@@ -415,10 +523,20 @@ export default function Player() {
                     setControls(true);
                   }}
                 />
-                <View className="mt-0.5 flex-row justify-between">
+                <View className="mt-0.5 flex-row items-center justify-between">
                   <Text className="text-[12px] tabular-nums text-white font-medium">
                     {clock(pos.time)}
                   </Text>
+                  <Pressable
+                    accessibilityLabel={`Playback speed ${speed} times`}
+                    scale={0.94}
+                    onPress={() => {
+                      setSpeed((v) => SPEEDS[(SPEEDS.indexOf(v as (typeof SPEEDS)[number]) + 1) % SPEEDS.length]);
+                      setControls(true);
+                    }}
+                    className="rounded-full bg-white/15 px-3 py-1">
+                    <Text className="text-[12px] tabular-nums text-white font-semibold">{speed}×</Text>
+                  </Pressable>
                   <Text className="text-[12px] tabular-nums text-t2 font-medium">
                     −{clock(left)}
                   </Text>
@@ -434,13 +552,7 @@ export default function Player() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}>
           <View className="px-gutter pt-5">
-            <View className="flex-row items-center gap-2">
-              <View className="h-1.5 w-1.5 rounded-full bg-white" />
-              <Text className="text-[11px] uppercase tracking-widest text-t2 font-medium">
-                Now playing · {clip?.title ?? 'Trailer'}
-              </Text>
-            </View>
-            <Text className="mt-2.5 text-[30px] tracking-tighter text-white font-bold">
+            <Text className="text-[30px] tracking-tighter text-white font-bold">
               {title.name}
             </Text>
             <Text className="mt-1.5 text-[12.5px] text-t3">
